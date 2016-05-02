@@ -30,7 +30,8 @@
 (defstruct (body
              (:constructor
               %make-body (%mass %inertia calculate-inertia-p
-                                position velocity force actor %angle angular-velocity
+                                position velocity force actor 
+                                %angle angular-velocity on-move-callback
                                 &aux
                                 (inverse-mass
                                  (without-floating-point-underflow
@@ -38,7 +39,8 @@
                                 (inverse-inertia
                                  (without-floating-point-underflow
                                    (if (zerop %inertia) 0d0 (/ %inertia))))
-                                (rotation (angle->vec %angle)))))
+                                (rotation (angle->vec %angle))
+                                (on-move-callback on-move-callback))))
   world                 ; world that this body is attached to, if any.
   actor                 ; Actor used for the COLLIDE "callback"
   %shapes               ; shapes associated with this body.
@@ -59,13 +61,14 @@
   (torque 0d0 :type double-float)
   ;; Velocity bias values used when solving penetrations and correcting constraints.
   (velocity-bias +zero-vector+ :type vec)
-  (angular-velocity-bias 0d0 :type double-float))
+  (angular-velocity-bias 0d0 :type double-float)
+  (on-move-callback nil))
 
 (defun make-body (&key (mass 0d0) (inertia most-positive-double-float) (calculate-inertia-p t)
                   (position +zero-vector+) (velocity +zero-vector+) (force +zero-vector+) actor
-                  shapes (angle 0d0) (angular-velocity 0d0))
+                  shapes (angle 0d0) (angular-velocity 0d0) on-move-callback)
   (let ((body (%make-body (float mass 0d0) (float inertia 1d0) calculate-inertia-p position velocity
-                          force actor (float angle 0d0) (float angular-velocity 0d0))))
+                          force actor (float angle 0d0) (float angular-velocity 0d0) on-move-callback)))
     (attach-shapes shapes body)
     body))
 
@@ -117,11 +120,14 @@
                      (velocity-bias body-velocity-bias)
                      (position body-position)
                      (velocity body-velocity)
-                     (angle body-angle)) body
+                     (angle body-angle)
+                     (callback body-on-move-callback)) body
       (setf position (vec+ position (vec* (vec+ velocity velocity-bias) dt)))
       (incf angle (* (+ angular-velocity angular-velocity-bias) dt))
       (setf velocity-bias +zero-vector+)
-      (setf angular-velocity-bias 0d0))))
+      (setf angular-velocity-bias 0d0)
+      (when callback
+        (funcall callback body)))))
 
 (defun body-slew (body pos dt)
   "Modify the velocity of the body so that it will move to the specified absolute coordinates in
