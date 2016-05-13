@@ -65,7 +65,7 @@ insertion was made, or NIL if DATA was already present in the table."
       (unless (find data (hash-set-chain set index) :test test :key #'cdr)
         (when (hash-set-full-p set)
           (hash-set-resize set))
-        (push (cons code data) (hash-set-chain set index))
+        (push (cons code data) (hash-set-chain set (mod code (hash-set-size set))))
         (incf (hash-set-count set))
         data))))
 
