@@ -9,7 +9,7 @@
 
 (defstruct (poly (:include shape)
                  (:constructor
-                  %make-poly (length restitution friction &aux
+                  %make-poly (length restitution friction actor &aux
                                      (transformed-vertices (make-array length :element-type 'vec))
                                      (transformed-axes (make-array length :element-type 'poly-axis)))))
   (vertices (make-array 0 :element-type 'vec) :type (simple-array vec (*)))
@@ -45,9 +45,9 @@
      and b = (pop tail) then c
      always (minusp (vec-cross (vec- b a) (vec- c b)))))
 
-(defun make-poly (vertices &key (restitution 0d0) (friction 0d0) (offset +zero-vector+))
+(defun make-poly (vertices &key (restitution 0d0) (friction 0d0) (offset +zero-vector+) actor)
   (assert (validate-vertices vertices))
-  (aprog1 (%make-poly (length vertices) (float restitution 1d0) (float friction 1d0))
+  (aprog1 (%make-poly (length vertices) (float restitution 1d0) (float friction 1d0) actor)
     (setf (values (poly-vertices it) (poly-axes it))
           (compute-new-vertices vertices offset))))
 

@@ -4,6 +4,7 @@
   :version "0.1 (unreleased)"
   :maintainer "Kat Marchán <kzm@sykosomatic.org>"
   :licence "MIT"
+  :description "A pure lisp implementation of the Chipmunk 2D physics engine."
   :components
   ((:module "src"
             :components

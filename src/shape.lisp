@@ -16,6 +16,7 @@
   (restitution 0d0 :type double-float)  ; Coefficient of restitution.
   (friction 0d0 :type double-float)     ; Coefficient of friction.
   (surface-velocity +zero-vector+ :type vec) ; Surface velocity used when solving for friction
+  actor
   ;; Unique ID, used internally for hashing
   (id (prog1 *shape-id-counter* (incf *shape-id-counter*))
       :type (unsigned-byte #. (integer-length most-positive-fixnum))))
@@ -103,15 +104,15 @@
 ;;;
 ;;; Circles
 ;;;
-(defstruct (circle (:constructor %make-circle (radius center restitution friction))
+(defstruct (circle (:constructor %make-circle (radius center restitution friction actor))
                    (:include shape))
   (radius (assert nil) :type double-float)
   ;; Center, in body-relative and world coordinates
   (center (assert nil) :type vec)
   (transformed-center +zero-vector+ :type vec))
 
-(defun make-circle (radius &key (center +zero-vector+) (restitution 0d0) (friction 0d0))
-  (%make-circle (float radius 1d0) center (float restitution 1d0) (float friction 1d0)))
+(defun make-circle (radius &key (center +zero-vector+) (restitution 0d0) (friction 0d0) actor)
+  (%make-circle (float radius 1d0) center (float restitution 1d0) (float friction 1d0) actor))
 
 (defmethod print-shape progn ((circle circle))
   (format t "Center: ~a, Radius: ~a"
