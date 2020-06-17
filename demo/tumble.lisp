@@ -23,10 +23,10 @@
     (make-body :actor :not-grabbable
                :angular-velocity 0.4
                :shapes
-               (list (make-segment a b :radius 0 :friction 1 :restitution 1)
-                     (make-segment b c :radius 0 :friction 1 :restitution 1)
-                     (make-segment c d :radius 0 :friction 1 :restitution 1)
-                     (make-segment d a :radius 0 :friction 1 :restitution 1)))))
+               (list (make-segment a b :radius 1 :friction 1 :restitution 1)
+                     (make-segment b c :radius 1 :friction 1 :restitution 1)
+                     (make-segment c d :radius 1 :friction 1 :restitution 1)
+                     (make-segment d a :radius 1 :friction 1 :restitution 1)))))
 
 (defmethod init-demo ((demo tumble-demo))
   (reset-shape-id-counter)
