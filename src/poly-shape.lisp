@@ -47,9 +47,13 @@
 
 (defun make-poly (vertices &key (restitution 0d0) (friction 0d0) (offset +zero-vector+) actor)
   (assert (validate-vertices vertices))
-  (aprog1 (%make-poly (length vertices) (float restitution 1d0) (float friction 1d0) actor)
-    (setf (values (poly-vertices it) (poly-axes it))
-          (compute-new-vertices vertices offset))))
+  (let ((poly (%make-poly (length vertices)
+                          (float restitution 1d0)
+                          (float friction 1d0)
+                          actor)))
+    (setf (values (poly-vertices poly) (poly-axes poly))
+          (compute-new-vertices vertices offset))
+    poly))
 
 (defun num-vertices (poly)
   (length (poly-vertices poly)))

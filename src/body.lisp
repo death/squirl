@@ -22,15 +22,23 @@
          (&key (mass 0d0) (inertia most-positive-double-float) (calculate-inertia-p t)
             (position +zero-vector+) (velocity +zero-vector+) (force +zero-vector+)
             actor shapes (angle 0d0) (angular-velocity 0d0))
-         (aprog1 (,(symbolicate "%MAKE-" name)
-                  (float mass 0d0) (float inertia 1d0) calculate-inertia-p position velocity
-                  force actor (float angle 0d0) (float angular-velocity 0d0))
-           (attach-shapes shapes it))))))
+         (let ((body (,(symbolicate "%MAKE-" name)
+                      (float mass 0d0)
+                      (float inertia 1d0)
+                      calculate-inertia-p
+                      position
+                      velocity
+                      force
+                      actor
+                      (float angle 0d0)
+                      (float angular-velocity 0d0))))
+           (attach-shapes shapes body)
+           body)))))
 
 (defstruct (body
              (:constructor
               %make-body (%mass %inertia calculate-inertia-p
-                                position velocity force actor 
+                                position velocity force actor
                                 %angle angular-velocity on-move-callback
                                 &aux
                                 (inverse-mass
