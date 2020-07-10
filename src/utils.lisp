@@ -130,11 +130,6 @@ as the index vector. Note that this macro doesn't handle declarations properly."
          ,form
        ,@body)))
 
-
-(defmacro aif (test-form then-form &optional else-form)
-  `(let ((it ,test-form))
-     (if it ,then-form ,else-form)))
-
 (defun parse-defmethod (args)
   (let (qualifiers lambda-list body (parse-state :qualifiers))
     (dolist (arg args)
