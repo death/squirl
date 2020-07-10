@@ -6,26 +6,27 @@
 
 ;;; The vector type
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (deftype vec ()
-    '(complex double-float))
+(deftype vec ()
+  '(complex double-float))
 
-  (declaim (ftype (function (real real) vec) vec)
-           (inline vec))
-  (defun vec (x y)
-    (complex (float x 1d0) (float y 1d0)))
+(declaim (ftype (function (real real) vec) vec)
+         (inline vec))
 
-  (declaim (ftype (function (vec) double-float) vec-x vec-y)
-           (inline vec-x vec-y) )
-  (locally (declare (optimize (speed 1))) ; For SBCL float returns
-    (defun vec-x (vec)
-      (realpart vec))
-    (defun vec-y (vec)
-      (imagpart vec))))
+(defun vec (x y)
+  (complex (float x 1d0) (float y 1d0)))
+
+(declaim (ftype (function (vec) double-float) vec-x vec-y)
+         (inline vec-x vec-y) )
+
+(defun vec-x (vec)
+  (realpart vec))
+
+(defun vec-y (vec)
+  (imagpart vec))
 
 ;;; The zero vector
 
-(define-constant +zero-vector+ (vec 0 0))
+(define-constant +zero-vector+ #C(0.0d0 0.0d0))
 
 (declaim (ftype (function (vec) boolean) vec-zerop)
          (inline vec-zerop))
