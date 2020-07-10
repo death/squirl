@@ -20,7 +20,7 @@
   (dolist (body (springy-bodies springy))
     (setf (body-actor body) springy)))
 
-(defcollision ((a springy) (b springy) contacts) (declare (ignore contacts)) (unless (eq a b) t))
+(defcollision ((a springy) (b springy) contacts) (unless (eq a b) t))
 
 (defun build-springies (world)
   (let ((springies

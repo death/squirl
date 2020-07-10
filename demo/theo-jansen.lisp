@@ -22,7 +22,7 @@
    (lower-legs :initform nil :initarg :lower-legs :accessor walker-lower-legs)))
 
 (defcollision ((a walker) (b walker) contacts) (not (eq a b)))
-(defcollision ((a walker) (b (eql :not-grabbable)) contacts) (declare (ignore a b contacts)) t)
+(defcollision ((a walker) (b (eql :not-grabbable)) contacts) t)
 
 (defun make-leg (world side offset walker anchor &aux (leg-mass 1))
   (let* ((upper-leg (world-add-body

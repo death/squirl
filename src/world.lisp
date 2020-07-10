@@ -94,6 +94,7 @@
               (if (equal spec-a spec-b)
                   `(defmethod collide ,@qualifiers ,lambda-list ,@body)
                   `(flet ((handler (,actor-a ,actor-b ,arbiter ,cnm-sym ,nmp-sym)
+                            (declare (ignorable ,actor-a ,actor-b ,arbiter))
                             ,@(pop-declarations body)
                             (flet ((call-next-method (&rest cnm-args)
                                      (apply ,cnm-sym cnm-args))
