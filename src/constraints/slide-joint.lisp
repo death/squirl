@@ -19,7 +19,6 @@
 
 (defmethod pre-step ((joint slide-joint) dt dt-inv)
   (with-accessors (
-                   (bias-coef slide-joint-bias-coefficient)
                    (max-bias slide-joint-max-bias)
                    (body-a slide-joint-body-a)
                    (body-b slide-joint-body-b)
@@ -33,8 +32,8 @@
                    (n-mass slide-joint-n-mass)
                    (bias slide-joint-bias)
                    (jn-max slide-joint-jn-max)
-                   (jn-acc slide-joint-jn-acc)) joint
-
+                   (jn-acc slide-joint-jn-acc))
+      joint
     (let* ((delta (vec- (vec+ (body-position body-b) r2) (vec+ (body-position body-a) r1)))
            (dist (vec-length delta))
            (pdist 0d0))
@@ -49,7 +48,10 @@
       ;; calculate mass normal
       (setf n-mass (/ 1d0 (k-scalar body-a body-b r1 r2  n )))
       ;; calculate bias velocity
-      (setf bias (clamp (- (* bias-coef dt-inv pdist)) (- max-bias) max-bias))
+      (setf bias (clamp (- (* (constraint-bias-coefficient joint dt)
+                              dt-inv
+                              pdist))
+                        (- max-bias) max-bias))
       ;; compute max impulse
       (setf jn-max (impulse-max joint dt))
       ;;apply accumulated impulse

@@ -39,7 +39,7 @@
                                                   (pin-joint-r1 joint)
                                                   (pin-joint-r2 joint)
                                                   (pin-joint-normal joint)))
-            (pin-joint-bias joint) (clamp (- (* (pin-joint-bias-coefficient joint)
+            (pin-joint-bias joint) (clamp (- (* (constraint-bias-coefficient joint dt)
                                                 dt-inverse
                                                 (- distance (pin-joint-distance joint))))
                                           (- max-bias) max-bias)

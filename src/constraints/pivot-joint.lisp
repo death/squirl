@@ -22,7 +22,6 @@
                    (body-b pivot-joint-body-b)
                    (j-max-length pivot-joint-j-max-length)
                    (bias pivot-joint-bias)
-                   (bias-coef pivot-joint-bias-coefficient)
                    (j-acc pivot-joint-j-acc)
                    (r1 pivot-joint-r1)
                    (r2 pivot-joint-r2)
@@ -42,7 +41,8 @@
     ;; calculate bias velocity
     (let ((delta (vec- (vec+ (body-position body-b) r2)
                        (vec+ (body-position body-a) r1))))
-      (setf bias (vec-clamp (vec* delta (- (* bias-coef dt-inv)))
+      (setf bias (vec-clamp (vec* delta (- (* (constraint-bias-coefficient pivot dt)
+                                              dt-inv)))
                             max-bias)))
     ;; apply joint torque
     (apply-impulses body-a body-b r1 r2 j-acc)))

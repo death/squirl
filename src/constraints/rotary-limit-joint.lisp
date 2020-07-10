@@ -19,17 +19,20 @@
                    (i-sum rotary-limit-joint-i-sum)
                    (j-max rotary-limit-joint-j-max)
                    (bias rotary-limit-joint-bias)
-                   (bias-coef rotary-limit-joint-bias-coefficient)
                    (min rotary-limit-joint-min)
                    (j-acc rotary-limit-joint-j-acc)
                    (max rotary-limit-joint-max)
-                   (max-bias rotary-limit-joint-max-bias)) rotary-limit
+                   (max-bias rotary-limit-joint-max-bias))
+      rotary-limit
     (let* ((dist (- (body-angle body-b) (body-angle body-a)))
            (pdist (if (> dist max) (- max dist) (- min dist))))
       ;; calculate moment of inertia coefficient
       (setf i-sum (/ 1d0 (+ (body-inverse-inertia body-a) (body-inverse-inertia body-b))))
       ;; calculate bias velocity
-      (setf bias (clamp (- (* bias-coef dt-inv pdist)) (- max-bias) max-bias))
+      (setf bias (clamp (- (* (constraint-bias-coefficient rotary-limit dt)
+                              dt-inv
+                              pdist))
+                        (- max-bias) max-bias))
       ;; compute max impulse
       (setf j-max (impulse-max rotary-limit dt))
       ;; if the bias is zero, the joint is not at a limit, reset impulse

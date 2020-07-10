@@ -349,7 +349,6 @@ makes sure that the current world is updated by 1 time unit per second."
                                       +zero-vector+
                                       (world->body-local body point)))
               (setf (squirl::constraint-max-force (mouse-joint *current-demo*)) 50000)
-              (setf (squirl::constraint-bias-coefficient (mouse-joint *current-demo*)) 0.15)
               (world-add-constraint (world *current-demo*) (mouse-joint *current-demo*))))))
        (t
         (world-remove-constraint (world *current-demo*) (mouse-joint *current-demo*))

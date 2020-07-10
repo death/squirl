@@ -23,14 +23,17 @@
                    (bias gear-joint-bias)
                    (ratio gear-joint-ratio)
                    (max-bias gear-joint-max-bias)
-                   (bias-coef gear-joint-bias-coefficient)
                    (ratio-inverse gear-joint-ratio-inverse)
                    (j-acc gear-joint-j-acc)
-                   (phase gear-joint-phase)) gear
+                   (phase gear-joint-phase))
+      gear
     ;; calculate moment of inertia coefficient
     (setf i-sum (/ 1d0 (+ (* (body-inverse-inertia body-a) ratio-inverse) (* ratio (body-inverse-inertia body-b)))))
     ;; calculate bias velocity
-    (setf bias (clamp (- (* bias-coef dt-inv (- (* (body-angle body-b) ratio) (body-angle body-a) phase))) (- max-bias) max-bias))
+    (setf bias (clamp (- (* (constraint-bias-coefficient gear dt)
+                            dt-inv
+                            (- (* (body-angle body-b) ratio) (body-angle body-a) phase)))
+                      (- max-bias) max-bias))
     ;; compute max impulse
     (setf j-max (impulse-max gear dt))
     ;; apply joint torque

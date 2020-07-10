@@ -50,10 +50,11 @@
     ;; Calculate bias velocity
     (let ((delta (vec- (vec+ (body-position body-b) (groove-joint-r2 joint))
                        (vec+ (body-position body-a) (groove-joint-r1 joint)))))
-      (setf (groove-joint-bias joint) (vec-clamp (vec* delta
-                                                       (- (* (groove-joint-bias-coefficient joint)
-                                                             dt-inverse)))
-                                                 (groove-joint-max-bias joint))))
+      (setf (groove-joint-bias joint)
+            (vec-clamp (vec* delta
+                             (- (* (constraint-bias-coefficient joint dt)
+                                   dt-inverse)))
+                       (groove-joint-max-bias joint))))
 
     ;; Apply accumulated impulse
     (apply-impulses body-a body-b

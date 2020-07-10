@@ -19,11 +19,11 @@
                    (i-sum ratchet-joint-i-sum)
                    (j-max ratchet-joint-j-max)
                    (bias ratchet-joint-bias)
-                   (bias-coef ratchet-joint-bias-coefficient)
                    (direction ratchet-joint-direction)
                    (j-acc ratchet-joint-j-acc)
                    (angle ratchet-joint-angle)
-                   (max-bias ratchet-joint-max-bias)) ratchet
+                   (max-bias ratchet-joint-max-bias))
+      ratchet
     (let* ((delta (- (body-angle body-b) (body-angle body-a)))
            (diff (- angle delta))
            (pdist (if (> diff 0d0) diff 0d0)))
@@ -31,7 +31,10 @@
       ;; calculate moment of inertia coefficient
       (setf i-sum (/ 1d0 (+ (body-inverse-inertia body-a) (body-inverse-inertia body-b))))
       ;; calculate bias velocity
-      (setf bias (clamp (- (* bias-coef dt-inv pdist)) (- max-bias) max-bias))
+      (setf bias (clamp (- (* (constraint-bias-coefficient ratchet dt)
+                              dt-inv
+                              pdist))
+                        (- max-bias) max-bias))
       ;; compute max impulse
       (setf j-max (impulse-max ratchet dt))
       ;; if the bias is zero, the joint is not at a limit, reset impulse
