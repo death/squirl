@@ -242,11 +242,16 @@ makes sure that the current world is updated by 1 time unit per second."
 (defun demo-title (demo)
   (concatenate 'string "Demo: " (demo-name demo)))
 
-(defun set-current-demo (demo-class)
+(defun ensure-demo (demo-designator)
+  (if (typep demo-designator 'demo)
+      demo-designator
+      (make-instance demo-designator)))
+
+(defun set-current-demo (demo-designator)
   (let ((old-demo *current-demo*))
     (reset-cumulative-mean-fps)
     (clear-color-hash)
-    (setf *current-demo* (make-instance demo-class))
+    (setf *current-demo* (ensure-demo demo-designator))
     (setf (world *current-demo*) (init-demo *current-demo*))
     (when old-demo
       (setf (mouse-position *current-demo*) (mouse-position old-demo))
@@ -390,8 +395,8 @@ makes sure that the current world is updated by 1 time unit per second."
   (gl:enable-client-state :vertex-array)
   (enable-anti-aliasing))
 
-(defun run-demo (demo-class)
-  (set-current-demo demo-class)
+(defun run-demo (demo-designator)
+  (set-current-demo demo-designator)
   (glut:display-window (make-instance 'squirl-window)))
 
 (defun run-all-demos ()
