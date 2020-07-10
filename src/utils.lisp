@@ -1,26 +1,31 @@
 ;;;; -*- Mode: Lisp; indent-tabs-mode: nil -*-
 (in-package :squirl.utils)
 
-(locally (declare (optimize speed))
+(declaim (inline make-adjustable-vector))
+(declaim (ftype (function (fixnum) vector) make-adjustable-vector))
 
-  (declaim (inline make-adjustable-vector clamp ensure-list)
-           (ftype (function (fixnum) vector) make-adjustable-vector)
-           (ftype (function (double-float double-float double-float) double-float))
-           (ftype (function (t) list) ensure-list))
+(defun make-adjustable-vector (length)
+  (declare (optimize speed))
+  (make-array length :adjustable t :fill-pointer 0))
 
-  (defun make-adjustable-vector (length)
-    (make-array length :adjustable t :fill-pointer 0))
+(declaim (inline ensure-list))
+(declaim (ftype (function (t) list) ensure-list))
 
-  (defun ensure-list (x) (if (listp x) x (list x)))
+(defun ensure-list (x)
+  (declare (optimize speed))
+  (if (listp x) x (list x)))
 
-  (defun clamp (n min max)
-    (declare (double-float n min max))
-    (min (max n min) max))
+(declaim (inline clamp))
+(declaim (ftype (function (double-float double-float double-float) double-float) clamp))
 
-)                                     ; LOCALLY
+(defun clamp (n min max)
+  (declare (double-float n min max))
+  (declare (optimize speed))
+  (min (max n min) max))
 
-(declaim (inline maybe/)
-         (ftype (function (double-float &optional double-float) double-float) maybe/))
+(declaim (inline maybe/))
+(declaim (ftype (function (double-float &optional double-float) double-float) maybe/))
+
 (defun maybe/ (a &optional b)
   ;; Don't declare me (optimize speed), because that chokes SBCL
   (if (zerop b) 0d0 (/ a b)))
@@ -29,9 +34,13 @@
   (if (zerop x) 0d0 (/ x)))
 
 ;; from alexandria:
-(declaim (inline delete/swapped-arguments delete-if/swapped-arguments))
+(declaim (inline delete/swapped-arguments))
+
 (defun delete/swapped-arguments (sequence item &rest keyword-arguments)
   (apply #'delete item sequence keyword-arguments))
+
+(declaim (inline delete-if/swapped-arguments))
+
 (defun delete-if/swapped-arguments (sequence predicate &rest keyword-arguments)
   (apply #'delete-if predicate sequence keyword-arguments))
 
