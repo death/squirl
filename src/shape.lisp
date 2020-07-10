@@ -122,14 +122,18 @@
 
 (defmethod compute-shape-bbox ((circle circle))
   (declare (optimize speed))
-  (with-vec (vec (circle-transformed-center circle))
-    (let ((r (circle-radius circle)))
-      (make-bbox (- vec.x r) (- vec.y r) (+ vec.x r) (+ vec.y r)))))
+  (let* ((vec (circle-transformed-center circle))
+         (vec.x (vec-x vec))
+         (vec.y (vec-y vec))
+         (r (circle-radius circle)))
+    (make-bbox (- vec.x r) (- vec.y r) (+ vec.x r) (+ vec.y r))))
 
 (defmethod shape-cache-data ((circle circle))
-  (with-place (body. body-) (position rotation) (circle-body circle)
+  (let* ((body (circle-body circle))
+         (pos (body-position body))
+         (rot (body-rotation body)))
     (setf (circle-transformed-center circle)
-          (vec+ body.position (vec-rotate (circle-center circle) body.rotation)))))
+          (vec+ pos (vec-rotate (circle-center circle) rot)))))
 
 (defmethod shape-point-query ((circle circle) point)
   (vec-near (circle-transformed-center circle) point (circle-radius circle)))
@@ -175,19 +179,27 @@
           (segment-radius segment)))
 
 (defmethod compute-shape-bbox ((seg segment))
-  (with-place (|| segment-) ((ta trans-a) (tb trans-b) (r radius)) seg
-    (with-vecs (ta tb)
-      (make-bbox (- (min ta.x tb.x) r) (- (min ta.y tb.y) r)
-                 (+ (max ta.x tb.x) r) (+ (max ta.y tb.y) r)))))
+  (let* ((ta (segment-trans-a seg))
+         (tb (segment-trans-b seg))
+         (r (segment-radius seg))
+         (ta.x (vec-x ta))
+         (ta.y (vec-y ta))
+         (tb.x (vec-x tb))
+         (tb.y (vec-y tb)))
+    (make-bbox (- (min ta.x tb.x) r) (- (min ta.y tb.y) r)
+               (+ (max ta.x tb.x) r) (+ (max ta.y tb.y) r))))
 
 (defmethod shape-cache-data ((seg segment))
-  (with-place (seg.t segment-trans-) (a b normal) seg
-    (with-place (seg. segment-) (a b normal body) seg
-      (with-place (body. body-) (position rotation) seg.body
-        (flet ((rotate (vec) (vec-rotate vec body.rotation)))
-          (setf seg.ta      (vec+ body.position (rotate seg.a))
-                seg.tb      (vec+ body.position (rotate seg.b))
-                seg.tnormal (rotate seg.normal)))))))
+  (let* ((a (segment-a seg))
+         (b (segment-b seg))
+         (normal (segment-normal seg))
+         (body (segment-body seg))
+         (position (body-position body))
+         (rotation (body-rotation body)))
+    (flet ((rotate (vec) (vec-rotate vec rotation)))
+      (setf (segment-trans-a seg) (vec+ position (rotate a)))
+      (setf (segment-trans-b seg) (vec+ position (rotate b)))
+      (setf (segment-trans-normal seg) (rotate normal)))))
 
 (defmethod shape-point-query ((seg segment) point)
   (when (bbox-containts-vec-p (shape-bbox seg) point)

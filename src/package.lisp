@@ -20,7 +20,6 @@
            :define-constant
            :define-print-object
            :do-vector
-           :with-place
            :parse-defmethod
            :pop-declarations))
 

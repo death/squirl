@@ -121,18 +121,6 @@ as the index vector. Note that this macro doesn't handle declarations properly."
          (dotimes (,idx-name (length ,vector) ,result)
            (let ((,var-name (aref ,vector ,idx-name))) ,@body))))))
 
-(defmacro with-place (conc-name (&rest slots) form &body body)
-  (let* ((sm-prefix (ensure-car conc-name))
-         (acc-prefix (ensure-cadr conc-name))
-         (*package* (symbol-package sm-prefix)))
-    `(with-accessors
-           ,(mapcar (lambda (slot)
-                      (list (symbolicate sm-prefix (ensure-car slot))
-                            (symbolicate acc-prefix (ensure-cadr slot))))
-             slots)
-         ,form
-       ,@body)))
-
 (defun parse-defmethod (args)
   (let (qualifiers lambda-list body (parse-state :qualifiers))
     (dolist (arg args)

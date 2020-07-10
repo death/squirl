@@ -115,9 +115,11 @@
             (make-poly-axis normal (+ (vec. position normal) (poly-axis-distance axis)))))))
 
 (defmethod shape-cache-data ((poly poly))
-  (with-place (body. body-) (position rotation) (poly-body poly)
-    (poly-transform-vertices poly body.position body.rotation)
-    (poly-transform-axes poly body.position body.rotation)))
+  (let* ((body (poly-body poly))
+         (pos (body-position body))
+         (rot (body-rotation body)))
+    (poly-transform-vertices poly pos rot)
+    (poly-transform-axes poly pos rot)))
 
 (defmethod shape-point-query ((poly poly) point)
   (and (bbox-containts-vec-p (poly-bbox poly) point)

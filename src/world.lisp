@@ -46,25 +46,27 @@
 
 (defun make-world (&rest keys)
   (declare (dynamic-extent keys))
-  (let ((world (apply #'%make-world keys)))
-    (with-place (|| world-) (contact-set timestamp arbiters) world
-      (setf (world-arbitrator world)
-            ;; Let us thank Scott Lembcke, who had to hunt bugs down and code solutions
-            ;; in C, while we can simply port said solutions into CL.
-            (lambda (shape1 shape2)
-              ;; This is a kludge. It might break on new shape types.
-              (when (or (and (poly-p shape1) (circle-p shape2))
-                        (and (poly-p shape1) (segment-p shape2)))
-                (rotatef shape1 shape2))
-              (when (collision-possible-p shape1 shape2)
-                (let ((contacts (collide-shapes shape1 shape2)))
-                  (when contacts
-                    (let ((arbiter (ensure-arbiter shape1 shape2 contact-set timestamp)))
-                      ;; This is also a kludge... got any better ideas?
-                      (setf (arbiter-shape-a arbiter) shape1
-                            (arbiter-shape-b arbiter) shape2)
-                      (vector-push-extend arbiter arbiters)
-                      (arbiter-inject arbiter contacts))))))))
+  (let* ((world (apply #'%make-world keys))
+         (contact-set (world-contact-set world))
+         (timestamp (world-timestamp world))
+         (arbiters (world-arbiters world)))
+    (setf (world-arbitrator world)
+          ;; Let us thank Scott Lembcke, who had to hunt bugs down and code solutions
+          ;; in C, while we can simply port said solutions into CL.
+          (lambda (shape1 shape2)
+            ;; This is a kludge. It might break on new shape types.
+            (when (or (and (poly-p shape1) (circle-p shape2))
+                      (and (poly-p shape1) (segment-p shape2)))
+              (rotatef shape1 shape2))
+            (when (collision-possible-p shape1 shape2)
+              (let ((contacts (collide-shapes shape1 shape2)))
+                (when contacts
+                  (let ((arbiter (ensure-arbiter shape1 shape2 contact-set timestamp)))
+                    ;; This is also a kludge... got any better ideas?
+                    (setf (arbiter-shape-a arbiter) shape1
+                          (arbiter-shape-b arbiter) shape2)
+                    (vector-push-extend arbiter arbiters)
+                    (arbiter-inject arbiter contacts)))))))
     world))
 
 (define-print-object (world)
@@ -108,16 +110,19 @@
 ;;;
 
 (defun world-add-static-shape (world shape)
-  (with-place (shape. shape-) (id bbox body) shape
-    (assert shape.body)
-    (shape-cache-data shape)
-    (world-hash-insert (world-static-shapes world)
-                       shape shape.id shape.bbox)))
+  (assert (shape-body shape))
+  (shape-cache-data shape)
+  (world-hash-insert (world-static-shapes world)
+                     shape
+                     (shape-id shape)
+                     (shape-bbox shape)))
 
 (defun world-add-active-shape (world shape)
-  (with-place (shape. shape-) (id bbox body) shape
-    (assert shape.body)
-    (world-hash-insert (world-active-shapes world) shape shape.id shape.bbox)))
+  (assert (shape-body shape))
+  (world-hash-insert (world-active-shapes world)
+                     shape
+                     (shape-id shape)
+                     (shape-bbox shape)))
 
 (defun world-add-body (world body)
   ;; FLET or MACROLET this up please
@@ -141,8 +146,8 @@
 (defun shape-removal-arbiter-reject (world shape)
   (delete-iff (world-arbiters world)
               (lambda (arbiter)
-                (with-place (arb. arbiter-) ((a shape-a) (b shape-b)) arbiter
-                  (and (not (eq shape arb.a)) (not (eq shape arb.b)))))))
+                (and (not (eq shape (arbiter-shape-a arbiter)))
+                     (not (eq shape (arbiter-shape-b arbiter)))))))
 
 (defun world-remove-shape (world shape)
   (world-hash-remove (if (staticp (shape-body shape))
@@ -192,8 +197,9 @@
   (map nil function (world-active-bodies world)))
 
 (defun world-bodies (world)
-  (with-place (|| world-) (active-bodies static-bodies) world
-   (concatenate 'vector static-bodies active-bodies)))
+  (concatenate 'vector
+               (world-static-bodies world)
+               (world-active-bodies world)))
 
 ;;;
 ;;; Segment Query Functions
@@ -241,10 +247,8 @@
 ;;;
 
 (defun collision-possible-p (shape1 shape2)
-  (with-place (a. shape-) ((bb bbox) body group layers) shape1
-    (with-place (b. shape-) ((bb bbox) body group layers) shape2
-      (and (not (eq a.body b.body))
-           (bbox-intersects-p a.bb b.bb)))))
+  (and (not (eq (shape-body shape1) (shape-body shape2)))
+       (bbox-intersects-p (shape-bbox shape1) (shape-bbox shape2))))
 
 ;;;
 ;;; Arbiter Frobbing Functions
@@ -261,7 +265,9 @@
 
 (defun flush-arbiters (world)
   "Flush outdated arbiters."
-  (with-place (|| world-) (timestamp contact-set arbiters) world
+  (let ((timestamp (world-timestamp world))
+        (contact-set (world-contact-set world))
+        (arbiters (world-arbiters world)))
     (hash-set-delete-if (lambda (arbiter)
                           (> (- timestamp (arbiter-stamp arbiter))
                              *contact-persistence*))
@@ -284,7 +290,9 @@
 
 (defun resolve-collisions (world)
   "Resolves collisions between objects in WORLD."
-  (with-place (|| world-) (active-shapes static-shapes arbiters arbitrator) world
+  (let ((active-shapes (world-active-shapes world))
+        (static-shapes (world-static-shapes world))
+        (arbitrator (world-arbitrator world)))
     (map-world-hash #'shape-cache-data active-shapes) ; Pre-cache BBoxen
     ;; Detect collisions between active and static shapes.
     (map-world-hash (lambda (shape)
@@ -295,7 +303,8 @@
   (filter-world-arbiters world))
 
 (defun prestep-world (world dt dt-inv)
-  (with-place (|| world-) (arbiters constraints) world
+  (let ((arbiters (world-arbiters world))
+        (constraints (world-constraints world)))
     ;; Prestep the arbiters
     (do-vector (arbiter arbiters)
       (arbiter-prestep arbiter dt-inv))
@@ -304,14 +313,18 @@
       (pre-step constraint dt dt-inv))))
 
 (defun apply-elastic-impulses (world)
-  (with-place (|| world-) (arbiters constraints elastic-iterations) world
+  (let ((elastic-iterations (world-elastic-iterations world))
+        (arbiters (world-arbiters world))
+        (constraints (world-constraints world)))
     (loop repeat elastic-iterations
-       do (do-vector (arbiter arbiters)
-            (arbiter-apply-impulse arbiter t))
-          (map nil #'apply-impulse constraints))))
+          do (do-vector (arbiter arbiters)
+               (arbiter-apply-impulse arbiter t))
+             (map nil #'apply-impulse constraints))))
 
 (defun integrate-velocities (world dt &aux (damping (expt (/ (world-damping world)) (- dt))))
-  (with-place (|| world-) (active-bodies arbiters gravity) world
+  (let ((active-bodies (world-active-bodies world))
+        (arbiters (world-arbiters world))
+        (gravity (world-gravity world)))
     ;; Apply gravity forces.
     (do-vector (body active-bodies)
       (body-update-velocity body gravity damping dt))
@@ -319,26 +332,31 @@
     (map nil #'arbiter-apply-cached-impulse arbiters)))
 
 (defun solve-impulses (world)
-  "Run the impulse solver, using the old-style elastic solver if elastic iterations are disabled"
-  (with-place (|| world-) (iterations elastic-iterations arbiters constraints) world
+  "Run the impulse solver, using the old-style elastic solver if
+elastic iterations are disabled"
+  (let ((iterations (world-iterations world))
+        (elastic-iterations (world-elastic-iterations world))
+        (arbiters (world-arbiters world))
+        (constraints (world-constraints world)))
     (loop with old-style-p = (zerop elastic-iterations)
-       repeat iterations do
-       (do-vector (arbiter arbiters)
-         (arbiter-apply-impulse arbiter old-style-p))
-       (do-vector (constraint constraints)
-         (apply-impulse constraint)))))
+          repeat iterations
+          do (do-vector (arbiter arbiters)
+               (arbiter-apply-impulse arbiter old-style-p))
+             (do-vector (constraint constraints)
+               (apply-impulse constraint)))))
 
 (defun world-step (world timestep)
   "Step the physical state of WORLD by DT seconds."
   (assert (not (zerop timestep)) (world) "Cannot step ~A by 0" world)
-  (let* ((dt (float timestep 0d0)) (dt-inv (/ dt)))
-    (with-place (|| world-) (active-bodies active-shapes) world
-      (flush-arbiters world)
-      (do-vector (body active-bodies)
-        (body-update-position body dt)) ; Integrate positions
-      (resolve-collisions world)
-      (prestep-world world dt dt-inv)
-      (apply-elastic-impulses world)
-      (integrate-velocities world dt)
-      (solve-impulses world)
-      (incf (world-timestamp world)))))
+  (let* ((dt (float timestep 0d0))
+         (dt-inv (/ dt))
+         (active-bodies (world-active-bodies world)))
+    (flush-arbiters world)
+    (do-vector (body active-bodies)
+      (body-update-position body dt)) ; Integrate positions
+    (resolve-collisions world)
+    (prestep-world world dt dt-inv)
+    (apply-elastic-impulses world)
+    (integrate-velocities world dt)
+    (solve-impulses world)
+    (incf (world-timestamp world))))

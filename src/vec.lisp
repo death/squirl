@@ -23,24 +23,6 @@
     (defun vec-y (vec)
       (imagpart vec))))
 
-;;; Helper macros
-
-(defmacro with-vec (form &body body)
-  "FORM is either a symbol bound to a `vec', or a list of the form:
-  (name form)
-where NAME is a symbol, and FORM evaluates to a `vec'.
-WITH-VEC binds NAME.x and NAME.y in the same manner as `with-accessors'."
-  (let* ((name (ensure-car form))
-         (place (ensure-cadr form))
-         (*package* (symbol-package name)))
-    `(with-place (,(symbolicate name ".") vec-)
-         (x y) ,place
-       ,@body)))
-
-(defmacro with-vecs ((form &rest forms) &body body)
-  "Convenience macro for nesting WITH-VEC forms"
-  `(with-vec ,form ,@(if forms `((with-vecs ,forms ,@body)) body)))
-
 ;;; The zero vector
 
 (define-constant +zero-vector+ (vec 0 0))
@@ -67,8 +49,7 @@ WITH-VEC binds NAME.x and NAME.y in the same manner as `with-accessors'."
 (defun vec->angle (vec)
   "Convert a vector to an angle, in radians."
   (declare (vec vec))
-  (with-vec vec
-    (atan vec.y vec.x)))
+  (atan (vec-y vec) (vec-x vec)))
 
 ;;; Vector arithmetic
 
@@ -109,16 +90,14 @@ WITH-VEC binds NAME.x and NAME.y in the same manner as `with-accessors'."
 (defun vec. (v1 v2)
   "Dot product of two vectors"
   (declare (vec v1 v2))
-  (with-vecs (v1 v2)
-    (+ (* v1.x v2.x)
-       (* v1.y v2.y))))
+  (+ (* (vec-x v1) (vec-x v2))
+     (* (vec-y v1) (vec-y v2))))
 
 (defun vec-cross (v1 v2)
   "Cross product of two vectors"
   (declare (vec v1 v2))
-  (with-vecs (v1 v2)
-    (- (* v1.x v2.y)
-       (* v1.y v2.x))))
+  (- (* (vec-x v1) (vec-y v2))
+     (* (vec-y v1) (vec-x v2))))
 
 ;;; Vector rotations
 
@@ -127,14 +106,12 @@ WITH-VEC binds NAME.x and NAME.y in the same manner as `with-accessors'."
 (defun vec-perp (vec)
   "Returns a new vector rotated PI/2 counterclockwise from VEC"
   (declare (vec vec))
-  (with-vec vec
-    (vec (- vec.y) vec.x)))
+  (vec (- (vec-y vec)) (vec-x vec)))
 
 (defun vec-rperp (vec)
   "Returns a new vector rotated PI/2 clockwise from VEC"
   (declare (vec vec))
-  (with-vec vec
-    (vec vec.y (- vec.x))))
+  (vec (vec-y vec) (- (vec-x vec))))
 
 (define-compiler-macro vec-rotate (&whole whole vec-form rot-form)
   (if (and (listp rot-form) (eq (car rot-form) 'vec))
@@ -156,7 +133,10 @@ WITH-VEC binds NAME.x and NAME.y in the same manner as `with-accessors'."
   "Rotates VEC by (vec->angle ROT) radians. ROT should be a unit vec.
 This function is symmetric between VEC and ROT."
   (declare (vec vec rot))
-  (with-vecs (vec rot)
+  (let ((vec.x (vec-x vec))
+        (vec.y (vec-y vec))
+        (rot.x (vec-x rot))
+        (rot.y (vec-y rot)))
     (vec (- (* vec.x rot.x)
             (* vec.y rot.y))
          (+ (* vec.x rot.y)
@@ -166,7 +146,10 @@ This function is symmetric between VEC and ROT."
   "Rotates VEC by (- (vec->angle ROT)) radians. ROT should be a unit vec.
 This function is symmetric between VEC and ROT."
   (declare (vec vec rot))
-  (with-vecs (vec rot)
+  (let ((vec.x (vec-x vec))
+        (vec.y (vec-y vec))
+        (rot.x (vec-x rot))
+        (rot.y (vec-y rot)))
     (vec (+ (* vec.x rot.x)
             (* vec.y rot.y))
          (- (* vec.y rot.x)

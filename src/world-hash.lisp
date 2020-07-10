@@ -145,9 +145,11 @@ list structure into the `world-hash-junk'."
 
 (defun world-hash-point-query (function hash point)
   (prog1 (let* ((dim (world-hash-cell-size hash))
-                (idx (with-vec (pt point)
-                       (hash (floor (/ pt.x dim)) (floor (/ pt.y dim))
-                             (world-hash-size hash)))))
+                (pt.x (vec-x point))
+                (pt.y (vec-y point))
+                (idx (hash (floor (/ pt.x dim))
+                           (floor (/ pt.y dim))
+                           (world-hash-size hash))))
            (map-world-hash-chain function hash (world-hash-chain hash idx) point))
     (incf (world-hash-stamp hash))))
 
@@ -177,8 +179,12 @@ list structure into the `world-hash-junk'."
 
 (defun world-hash-query-segment (function hash vec-a vec-b)
   (with-accessors ((cell-size world-hash-cell-size)) hash
-    (with-vecs ((a (vec* vec-a (/ cell-size)))
-                (b (vec* vec-b (/ cell-size))))
+    (let* ((a (vec* vec-a (/ cell-size)))
+           (a.x (vec-x a))
+           (a.y (vec-y a))
+           (b (vec* vec-b (/ cell-size)))
+           (b.x (vec-x b))
+           (b.y (vec-y b)))
       (let ((dt/dx (/ (abs (- b.x a.x))))
             (dt/dy (/ (abs (- b.y a.y))))
             (cell-x (floor a.x))
@@ -192,16 +198,17 @@ list structure into the `world-hash-junk'."
             (setf y-inc  1 next-v (* (- (floor (1+ a.x)) a.x) dt/dy))
             (setf y-inc -1 next-v (* (- a.y      (floor a.y)) dt/dy)))
         (let ((cell-size (world-hash-size hash)))
-          (loop while (< ratio exit-ratio) for index = (hash cell-x cell-y cell-size)
-             for new-ratio = (query-segment function hash (world-hash-chain hash index))
-             do (setf exit-ratio (min exit-ratio new-ratio))
-                (if (< next-v next-h) ; Note indentation
-                    (progn
-                      (incf cell-y y-inc)
-                      (setf ratio next-v)
-                      (incf next-v dt/dy))
-                    (progn
-                      (incf cell-x x-inc)
-                      (setf ratio next-h)
-                      (incf next-h dt/dx)))))
+          (loop while (< ratio exit-ratio)
+                for index = (hash cell-x cell-y cell-size)
+                for new-ratio = (query-segment function hash (world-hash-chain hash index))
+                do (setf exit-ratio (min exit-ratio new-ratio))
+                   (if (< next-v next-h) ; Note indentation
+                       (progn
+                         (incf cell-y y-inc)
+                         (setf ratio next-v)
+                         (incf next-v dt/dy))
+                       (progn
+                         (incf cell-x x-inc)
+                         (setf ratio next-h)
+                         (incf next-h dt/dx)))))
         (incf (world-hash-stamp hash))))))

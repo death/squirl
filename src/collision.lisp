@@ -118,12 +118,13 @@
                                              (poly-axis-distance (aref axes 0)))))
         (unless (or (plusp poly-min)
                     (do-vector ((i axis) axes)
-                      (with-place (axis. poly-axis-) (normal distance) axis
-                       (let ((distance (segment-value-on-axis segment axis.normal axis.distance)))
-                         (when (> distance 0) (return t))
-                         (when (> distance poly-min)
-                           (setf poly-min distance
-                                 min-i i))))))
+                      (let ((distance (segment-value-on-axis segment
+                                                             (poly-axis-normal axis)
+                                                             (poly-axis-distance axis))))
+                        (when (> distance 0) (return t))
+                        (when (> distance poly-min)
+                          (setf poly-min distance
+                                min-i i)))))
           (let* ((poly-normal (vec- (poly-axis-normal (aref axes min-i))))
                  (vertex-a (vec+ (segment-trans-a segment)
                                  (vec* poly-normal (segment-radius segment))))
@@ -216,13 +217,19 @@
                                    (vec. line-vec line-vec))
                                 0d0 1d0))))
 
-(defun segment-intersection (a b &aux
-                             (a-a (segment-trans-a a))
-                             (a-b (segment-trans-b a))
-                             (b-a (segment-trans-a b))
-                             (b-b (segment-trans-b b)))
+(defun segment-intersection (a b &aux (a-a (segment-trans-a a))
+                                      (a-b (segment-trans-b a))
+                                      (b-a (segment-trans-a b))
+                                      (b-b (segment-trans-b b)))
   ;; Based on http://local.wasp.uwa.edu.au/~pbourke/geometry/lineline2d/
-  (with-vecs (a-a a-b b-a b-b)
+  (let ((a-a.x (vec-x a-a))
+        (a-a.y (vec-y a-a))
+        (a-b.x (vec-x a-b))
+        (a-b.y (vec-y a-b))
+        (b-a.x (vec-x b-a))
+        (b-a.y (vec-y b-a))
+        (b-b.x (vec-x b-b))
+        (b-b.y (vec-y b-b)))
     (let ((x-factor-num (- (* (- b-b.x b-a.x) (- a-a.y b-a.y))
                            (* (- a-a.x b-a.x) (- b-b.y b-a.y))))
           (y-factor-num (- (* (- a-b.x b-a.x) (- a-a.y b-a.y))
@@ -232,7 +239,7 @@
       (cond
         ((= 0 denom x-factor-num y-factor-num) ; Coincident
          (vec* (vec- (segment-center a) (segment-center b)) 0.5d0))
-        ((= 0 denom) nil) ; Parallel
+        ((= 0 denom) nil)               ; Parallel
         (t (let* ((intersection (vec+ a-a
                                       (vec (* (/ x-factor-num denom)
                                               (- a-b.x a-a.x))

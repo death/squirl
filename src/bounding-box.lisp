@@ -25,7 +25,8 @@
 
 (defun bbox-containts-vec-p (bb vec)
   "Tests whether `vec' VEC is entirely contained by `bbox' BB"
-  (with-vec vec
+  (let ((vec.x (vec-x vec))
+        (vec.y (vec-y vec)))
     (and (< (bbox-left bb)   vec.x)
          (> (bbox-right bb)  vec.x)
          (< (bbox-bottom bb) vec.y)
