@@ -53,9 +53,7 @@
   (pushnew shape (body-%shapes (shape-body shape)))
   (shape-cache-data shape)
   (when (body-world body)
-    (if (staticp body)
-        (world-add-static-shape (body-world body) shape)
-        (world-add-active-shape (body-world body) shape))))
+    (world-add-shape (body-world body) shape)))
 
 (defun attach-shape (shape body)
   "Attaches SHAPE to BODY. All shapes must be attached to a body before they're used."

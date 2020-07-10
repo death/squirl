@@ -112,7 +112,6 @@
    :world-constraints
    :world-add-body
    :world-add-shape
-   :world-add-static-shape
    :world-add-constraint
    :world-remove-shape
    :world-remove-static-shape

@@ -110,34 +110,28 @@
 ;;; Body, Shape, and Joint Management
 ;;;
 
-(defun world-add-static-shape (world shape)
+(defun world-add-shape (world shape)
   (assert (shape-body shape))
-  (shape-cache-data shape)
-  (world-hash-insert (world-static-shapes world)
-                     shape
-                     (shape-id shape)
-                     (shape-bbox shape)))
-
-(defun world-add-active-shape (world shape)
-  (assert (shape-body shape))
-  (world-hash-insert (world-active-shapes world)
-                     shape
-                     (shape-id shape)
-                     (shape-bbox shape)))
+  (let ((is-static (staticp (shape-body shape))))
+    (when is-static
+      (shape-cache-data shape))
+    (world-hash-insert (if is-static
+                           (world-static-shapes world)
+                           (world-active-shapes world))
+                       shape
+                       (shape-id shape)
+                       (shape-bbox shape))))
 
 (defun world-add-body (world body)
-  ;; FLET or MACROLET this up please
-  (cond ((staticp body)
-         (assert (not (find body (world-static-bodies world))))
-         (vector-push-extend body (world-static-bodies world))
-         (dolist (shape (body-shapes body))
-           (world-add-static-shape world shape)))
-        (t (assert (not (find body (world-active-bodies world))))
-           (vector-push-extend body (world-active-bodies world))
-           (dolist (shape (body-shapes body))
-             (world-add-active-shape world shape))))
-  (setf (body-world body) world)
-  body)
+  (let ((bodies (if (staticp body)
+                    (world-static-bodies world)
+                    (world-active-bodies world))))
+    (assert (not (find body bodies)))
+    (vector-push-extend body bodies)
+    (dolist (shape (body-shapes body))
+      (world-add-shape world shape))
+    (setf (body-world body) world)
+    body))
 
 (defun world-add-constraint (world constraint)
   (assert (not (find constraint (world-constraints world))))

@@ -14,22 +14,22 @@
     (setf (shape-restitution shape) 1.0)
     (setf (shape-friction shape) 1.0)
 
-    (world-add-static-shape space shape)
+    (world-add-shape space shape)
 
     (setf shape (make-segment static-body a2 b2 1.0))
     (setf (shape-restitution shape) 1.0)
     (setf (shape-friction shape) 1.0)
-    (world-add-static-shape space shape)
+    (world-add-shape space shape)
 
     (setf shape ( make-segment static-body a3 b3 1.0))
     (setf (shape-restitution shape) 1.0)
     (setf (shape-friction shape) 1.0)
-    (world-add-static-shape space shape)
+    (world-add-shape space shape)
 
     (setf shape (make-segment static-body a4 b4 1.0))
     (setf (shape-restitution shape) 1.0)
     (setf (shape-friction shape) 1.0)
-    (world-add-static-shape space shape)))
+    (world-add-shape space shape)))
 
 (defun init-world ()
   (reset-shape-id-counter)
