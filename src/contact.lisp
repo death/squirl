@@ -24,9 +24,11 @@
   (hash 0 :type fixnum))
 
 (defun contacts-sum-impulses (&rest contacts)
-  (reduce #'vec+ contacts :initial-value +zero-vector+
-          :key (fun (vec* (contact-normal _)
-                          (contact-accumulated-normal-impulse _)))))
+  (reduce #'vec+ contacts
+          :initial-value +zero-vector+
+          :key (lambda (contact)
+                 (vec* (contact-normal contact)
+                       (contact-accumulated-normal-impulse contact)))))
 
 (defun contact-impulse-with-friction (contact)
   (vec-rotate (contact-normal contact)
@@ -43,4 +45,3 @@
      for vec-sum = +zero-vector+ then (vec+ vec-sum impulse)
      sum (vec-length impulse) into scalar-sum
      finally (return (- 1 (/ (vec-length vec-sum) scalar-sum)))))
-

@@ -66,7 +66,9 @@
 
 (defun attach-shapes (shapes body)
   "Attaches multiple shapes to BODY. This function adds all the shapes before recalculating inertia."
-  (map nil (fun (%attach-shape _ body)) shapes)
+  (map nil (lambda (shape)
+             (%attach-shape shape body))
+       shapes)
   (when (body-calculate-inertia-p body)
     (setf (body-inertia body) (calculate-inertia body)))
   body)

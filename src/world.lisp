@@ -139,8 +139,9 @@
 
 (defun shape-removal-arbiter-reject (world shape)
   (delete-iff (world-arbiters world)
-              (fun (with-place (arb. arbiter-) ((a shape-a) (b shape-b)) _
-                     (and (not (eq shape arb.a)) (not (eq shape arb.b)))))))
+              (lambda (arbiter)
+                (with-place (arb. arbiter-) ((a shape-a) (b shape-b)) arbiter
+                  (and (not (eq shape arb.a)) (not (eq shape arb.b)))))))
 
 (defun world-remove-shape (world shape)
   (world-hash-remove (if (staticp (shape-body shape))
@@ -150,7 +151,9 @@
   (shape-removal-arbiter-reject world shape))
 
 (defun world-remove-body (world body)
-  (map nil (fun (world-remove-shape world _))  (body-shapes body))
+  (map nil (lambda (shape)
+             (world-remove-shape world shape))
+       (body-shapes body))
   (if (staticp body) ; Needs more macrolet
       (deletef (world-static-bodies world) body)
       (deletef (world-active-bodies world) body)))
@@ -174,7 +177,8 @@
 ;;; uses a functional RETURN-FROM rather than the pointer juggling
 ;;; from the C version, for speed and clarity.
 (defun world-point-query-first (world point)
-  (world-point-query (fun (return-from world-point-query-first _))
+  (world-point-query (lambda (shape)
+                       (return-from world-point-query-first shape))
                      world point))
 
 ;;;
@@ -248,21 +252,27 @@
 (defun filter-world-arbiters (world)
   "Filter arbiter list based on collisions."
   (delete-iff (world-arbiters world)
-              (fun (let ((a (body-actor (shape-body (arbiter-shape-a _))))
-                         (b (body-actor (shape-body (arbiter-shape-b _)))))
-                     (when (or a b) (not (funcall (world-collision-callback world) a b _)))))))
+              (lambda (arbiter)
+                (let ((a (body-actor (shape-body (arbiter-shape-a arbiter))))
+                      (b (body-actor (shape-body (arbiter-shape-b arbiter)))))
+                  (when (or a b)
+                    (not (funcall (world-collision-callback world) a b arbiter)))))))
 
 (defun flush-arbiters (world)
   "Flush outdated arbiters."
   (with-place (|| world-) (timestamp contact-set arbiters) world
-    (hash-set-delete-if (fun (> (- timestamp (arbiter-stamp _)) *contact-persistence*))
+    (hash-set-delete-if (lambda (arbiter)
+                          (> (- timestamp (arbiter-stamp arbiter))
+                             *contact-persistence*))
                         contact-set)
     (setf (fill-pointer arbiters) 0)))
 
 (defun ensure-arbiter (shape1 shape2 hash-set timestamp)
   (let* ((hash (hash-pair (shape-id shape1) (shape-id shape2)))
-         (arbiter (hash-set-find-if (fun (arbiter-has-shapes-p _ shape1 shape2))
-                                    hash-set hash)))
+         (arbiter (hash-set-find-if (lambda (arbiter)
+                                      (arbiter-has-shapes-p arbiter shape1 shape2))
+                                    hash-set
+                                    hash)))
     (if arbiter
         (prog1 arbiter (setf (arbiter-stamp arbiter) timestamp))
         (hash-set-insert hash-set hash (make-arbiter nil shape1 shape2 timestamp)))))
@@ -276,7 +286,8 @@
   (with-place (|| world-) (active-shapes static-shapes arbiters arbitrator) world
     (map-world-hash #'shape-cache-data active-shapes) ; Pre-cache BBoxen
     ;; Detect collisions between active and static shapes.
-    (map-world-hash (fun (world-hash-query arbitrator static-shapes _ (shape-bbox _)))
+    (map-world-hash (lambda (shape)
+                      (world-hash-query arbitrator static-shapes shape (shape-bbox shape)))
                     active-shapes)
     ;; This seems to be detecting collisions between active shapes.
     (world-hash-query-rehash arbitrator active-shapes))

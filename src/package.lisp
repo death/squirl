@@ -9,7 +9,6 @@
            :clamp
            :maybe/
            :maybe-inverse
-           :fun :_
            :deletef
            :delete-iff
            :with-gensyms

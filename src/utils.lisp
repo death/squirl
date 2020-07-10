@@ -28,9 +28,6 @@
 (defun maybe-inverse (x)
   (if (zerop x) 0d0 (/ x)))
 
-(defmacro fun (&body body)
-  `(lambda (&optional _) (declare (ignorable _)) ,@body))
-
 ;; from alexandria:
 (declaim (inline delete/swapped-arguments delete-if/swapped-arguments))
 (defun delete/swapped-arguments (sequence item &rest keyword-arguments)
@@ -60,7 +57,7 @@ the result of calling DELETE with PREDICATE, place, and the REMOVE-KEYWORDS.")
   (defun symbolicate (&rest things)
     "Concatenate together the names of some strings and symbols,
 producing a symbol in the current package."
-    (let ((name (make-string (reduce #'+ things :key (fun (length (string _)))))))
+    (let ((name (make-string (reduce #'+ things :key (lambda (thing) (length (string thing)))))))
       (let ((index 0))
         (dolist (thing things (values (intern name)))
           (let ((x (string thing)))
@@ -117,9 +114,10 @@ as the index vector. Note that this macro doesn't handle declarations properly."
          (acc-prefix (ensure-cadr conc-name))
          (*package* (symbol-package sm-prefix)))
     `(with-accessors
-           ,(mapcar (fun (list (symbolicate sm-prefix (ensure-car _))
-                               (symbolicate acc-prefix (ensure-cadr _))))
-                    slots)
+           ,(mapcar (lambda (slot)
+                      (list (symbolicate sm-prefix (ensure-car slot))
+                            (symbolicate acc-prefix (ensure-cadr slot))))
+             slots)
          ,form
        ,@body)))
 

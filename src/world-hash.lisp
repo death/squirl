@@ -121,7 +121,8 @@ list structure into the `world-hash-junk'."
 
 (defun rehash-world-hash (hash)
   (clear-world-hash hash)
-  (map-hash-set (fun (hash-handle hash _ (shape-bbox (handle-object _))))
+  (map-hash-set (lambda (handle)
+                  (hash-handle hash handle (shape-bbox (handle-object handle))))
                 (world-hash-handle-set hash)))
 
 (defun world-hash-remove (hash object id)
@@ -130,7 +131,8 @@ list structure into the `world-hash-junk'."
     (when foundp (handle-object handle))))
 
 (defun map-world-hash (function hash)
-  (map-hash-set (fun (funcall function (handle-object _)))
+  (map-hash-set (lambda (handle)
+                  (funcall function (handle-object handle)))
                 (world-hash-handle-set hash)))
 
 (defun map-world-hash-chain (function hash chain object)
@@ -156,13 +158,13 @@ list structure into the `world-hash-junk'."
 
 (defun world-hash-query-rehash (function hash)
   (clear-world-hash hash)
-  (map-hash-set (fun
-                  (let* ((object (handle-object _)))
+  (map-hash-set (lambda (handle)
+                  (let ((object (handle-object handle)))
                     (do-bbox (chain-form hash (shape-bbox object))
                       for chain = chain-form
-                      unless (find _ chain) do
-                        (map-world-hash-chain function hash chain object)
-                        (push _ chain-form)))
+                      unless (find handle chain) do
+                      (map-world-hash-chain function hash chain object)
+                      (push handle chain-form)))
                   (incf (world-hash-stamp hash)))
                 (world-hash-handle-set hash)))
 
