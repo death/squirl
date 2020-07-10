@@ -251,6 +251,7 @@ makes sure that the current world is updated by 1 time unit per second."
   (let ((old-demo *current-demo*))
     (reset-cumulative-mean-fps)
     (clear-color-hash)
+    (setf *arrow-direction* +zero-vector+)
     (setf *current-demo* (ensure-demo demo-designator))
     (setf (world *current-demo*) (init-demo *current-demo*))
     (when old-demo
