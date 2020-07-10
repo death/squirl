@@ -29,7 +29,7 @@
     (let* ((delta (vec- (vec+ (body-position body-b)
                               (pin-joint-r2 joint))
                         (vec+ (body-position body-a)
-                              (pin-joint-r2 joint))))
+                              (pin-joint-r1 joint))))
            (distance (vec-length delta))
            (max-bias (pin-joint-max-bias joint)))
       (setf (pin-joint-normal joint) (vec* delta (/ (if (zerop distance)
