@@ -1,8 +1,11 @@
 (in-package :squirl-demo)
 
 (defclass plink-demo (demo)
-  ((num-verts :initarg :num-verts :initform 5 :accessor plink-num-verts)
-   (static-body :initarg :static-body :initform (make-body :actor :not-grabbable)
+  ((num-verts :initarg :num-verts
+              :initform 5
+              :accessor plink-num-verts)
+   (static-body :initarg :static-body
+                :initform (make-body :actor :not-grabbable)
                 :accessor demo-static-body)
    (angle :accessor plink-angle))
   (:default-initargs :name "Plink!" :physics-timestep 1/60))
@@ -23,21 +26,25 @@
   (map-world #'reset-fallen-body (world demo)))
 
 (defun create-static-triangles (demo)
-  (dotimes (i 9)
-    (dotimes (j 6)
-      (attach-shape (make-poly '#.(list (vec -15 -15) (vec 0 10) (vec 15 -15))
-                               :offset (vec (- (* i 80) 320 (if (oddp j) -40 0))
-                                            (- (* j 70) 240))
-                               :restitution 1 :friction 1)
-                    (demo-static-body demo)))))
+  (let ((vertices (list (vec -15 -15) (vec 0 10) (vec 15 -15))))
+    (dotimes (i 9)
+      (dotimes (j 6)
+        (attach-shape (make-poly vertices
+                                 :offset (vec (- (* i 80) 320 (if (oddp j) -40 0))
+                                              (- (* j 70) 240))
+                                 :restitution 1
+                                 :friction 1)
+                      (demo-static-body demo))))))
 
 (defun create-polygons (demo)
   (let* ((verts (loop for i below (plink-num-verts demo)
-                   collect (vec* (angle->vec (* i (plink-angle demo))) 10d0)))
+                      collect (vec* (angle->vec (* i (plink-angle demo))) 10d0)))
          (inertia (moment-of-inertia-for-poly 1 verts)))
     (dotimes (i 300)
       (world-add-body (world demo)
-                      (make-body :mass 1 :inertia inertia :position (vec (- (random 640) 320) 350)
+                      (make-body :mass 1
+                                 :inertia inertia
+                                 :position (vec (- (random 640) 320) 350)
                                  :shapes (list (make-poly verts :friction 0.2)))))))
 
 (defmethod init-demo ((demo plink-demo))
