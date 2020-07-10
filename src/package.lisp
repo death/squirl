@@ -21,7 +21,7 @@
            :define-print-object
            :do-vector
            :with-place
-           :aprog1 :aif :awhen :it
+           :aprog1 :aif :it
            :parse-defmethod
            :pop-declarations))
 

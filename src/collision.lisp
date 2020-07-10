@@ -259,39 +259,46 @@
   (vec* (vec+ (segment-trans-a segment) (segment-trans-b segment))
         0.5d0))
 
-(defun segment-to-segment (a b &aux
-                           (end-a-a (segment-trans-a a))
-                           (end-a-b (segment-trans-b a))
-                           (end-b-a (segment-trans-a b))
-                           (end-b-b (segment-trans-b b))
-                           (radius-a (segment-radius a))
-                           (radius-b (segment-radius b)))
+(defun segment-to-segment (a b &aux (end-a-a (segment-trans-a a))
+                                    (end-a-b (segment-trans-b a))
+                                    (end-b-a (segment-trans-a b))
+                                    (end-b-b (segment-trans-b b))
+                                    (radius-a (segment-radius a))
+                                    (radius-b (segment-radius b)))
   (if (= 0 radius-a radius-b)
-      (progn
-        (awhen (segment-intersection a b)
+      (let ((point (segment-intersection a b)))
+        (when point
           (let ((delta (vec- (segment-center b) (segment-center a))))
-           (list (make-contact it (vec-normalize delta) (vec-length delta))))))
+            (list (make-contact point (vec-normalize delta) (vec-length delta))))))
       (let (contacts)
-        (awhen (circle-to-circle-query
-                (closest-point-on-segment a end-b-a) end-b-a
-                radius-a radius-b)
-          (push it contacts))
-        (awhen (circle-to-circle-query
-                (closest-point-on-segment a end-b-b) end-b-b
-                radius-a radius-b)
-          (push it contacts))
+        (let ((contact (circle-to-circle-query (closest-point-on-segment a end-b-a)
+                                               end-b-a
+                                               radius-a
+                                               radius-b)))
+          (when contact
+            (push contact contacts)))
+        (let ((contact (circle-to-circle-query (closest-point-on-segment a end-b-b)
+                                               end-b-b
+                                               radius-a
+                                               radius-b)))
+          (when contact
+            (push contact contacts)))
         (when (< (length contacts) 2)
-          (awhen (circle-to-circle-query
-                  (closest-point-on-segment b end-a-a) end-a-a
-                  radius-b radius-a)
-            (setf (contact-normal it) (vec- (contact-normal it)))
-            (push it contacts))
+          (let ((contact (circle-to-circle-query (closest-point-on-segment b end-a-a)
+                                                 end-a-a
+                                                 radius-b
+                                                 radius-a)))
+            (when contact
+              (setf (contact-normal contact) (vec- (contact-normal contact)))
+              (push contact contacts)))
           (when (< (length contacts) 2)
-            (awhen (circle-to-circle-query
-                    (closest-point-on-segment b end-a-b) end-a-b
-                    radius-b radius-a)
-              (setf (contact-normal it) (vec- (contact-normal it)))
-              (push it contacts))))
+            (let ((contact (circle-to-circle-query (closest-point-on-segment b end-a-b)
+                                                   end-a-b
+                                                   radius-b
+                                                   radius-a)))
+              (when contact
+                (setf (contact-normal contact) (vec- (contact-normal contact)))
+                (push contact contacts)))))
         contacts)))
 
 ;;;
@@ -320,4 +327,3 @@
     (poly-to-poly poly1 poly2))
   (:method ((seg1 segment) (seg2 segment))
     (segment-to-segment seg1 seg2)))
-

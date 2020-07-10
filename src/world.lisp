@@ -57,13 +57,14 @@
                         (and (poly-p shape1) (segment-p shape2)))
                 (rotatef shape1 shape2))
               (when (collision-possible-p shape1 shape2)
-                (awhen (collide-shapes shape1 shape2)
-                  (let ((arbiter (ensure-arbiter shape1 shape2 contact-set timestamp)))
-                    ;; This is also a kludge... got any better ideas?
-                    (setf (arbiter-shape-a arbiter) shape1
-                          (arbiter-shape-b arbiter) shape2)
-                    (vector-push-extend arbiter arbiters)
-                    (arbiter-inject arbiter it)))))))
+                (let ((contacts (collide-shapes shape1 shape2)))
+                  (when contacts
+                    (let ((arbiter (ensure-arbiter shape1 shape2 contact-set timestamp)))
+                      ;; This is also a kludge... got any better ideas?
+                      (setf (arbiter-shape-a arbiter) shape1
+                            (arbiter-shape-b arbiter) shape2)
+                      (vector-push-extend arbiter arbiters)
+                      (arbiter-inject arbiter contacts))))))))
     world))
 
 (define-print-object (world)
