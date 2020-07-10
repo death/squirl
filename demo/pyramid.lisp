@@ -72,4 +72,4 @@
                                       offset))))))
   (world demo))
 
-(pushnew 'pyramid-demo *demos*)
+(provide-demo 'pyramid-demo)

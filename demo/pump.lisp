@@ -117,4 +117,4 @@
     (motorize-gear (world demo) (demo-static-body demo) big-gear))
   (world demo))
 
-(pushnew 'pump-demo *demos*)
+(provide-demo 'pump-demo)

@@ -126,4 +126,4 @@
   (add-springs (world demo) (static-body demo) (build-springies (world demo)))
   (world demo))
 
-(pushnew 'springies-demo *demos*)
+(provide-demo 'springies-demo)

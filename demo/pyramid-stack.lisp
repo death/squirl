@@ -37,4 +37,4 @@
                                               :shapes (list (make-circle radius :friction 0.9)))))
     (world demo)))
 
-(pushnew 'pyramid-stack *demos*)
+(provide-demo 'pyramid-stack)

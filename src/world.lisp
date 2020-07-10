@@ -35,7 +35,8 @@
   (active-bodies (make-adjustable-vector *initial-array-length*) :type (vector t))
   ;; Active arbiters for the impulse solver.
   (arbiters (make-adjustable-vector *initial-array-length*) :type (vector t))
-  (contact-set (make-hash-set 0 #'arbiter-shapes-equal) :type hash-set) ; Persistent contact set.
+  ;; Persistent contact set.
+  (contact-set (make-hash-set 0 #'arbiter-shapes-equal) :type hash-set)
   ;; Constraints in the system.
   (constraints (make-adjustable-vector *initial-array-length*) :type (vector t))
   arbitrator

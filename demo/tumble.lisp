@@ -48,4 +48,4 @@
                                    :shapes (list (make-poly verts :friction 0.7)))))))
   (world demo))
 
-(pushnew 'tumble-demo *demos*)
+(provide-demo 'tumble-demo)

@@ -96,4 +96,4 @@
                                                    (walker-crank (demo-walker demo)) 6)))
     (world demo)))
 
-(pushnew 'theo-jansen *demos*)
+(provide-demo 'theo-jansen)

@@ -1,6 +1,9 @@
 (defpackage #:squirl-demo
   (:use :cl :squirl :squirl.utils)
-  (:export :run-all-demos))
+  (:export
+   :run-all-demos
+   :run-demo))
+
 (in-package :squirl-demo)
 
 (defparameter *sleep-ticks* 16)
@@ -18,9 +21,9 @@
 (defvar *aa-enabled-p* nil)
 
 (defparameter *dt-threshold* 0.01)
-;;;
-;;; Utils
-;;;
+
+;;;; Utils
+
 (defun now ()
   (/ (get-internal-real-time) internal-time-units-per-second))
 
@@ -35,41 +38,57 @@ Returns both the difference in time and the current-time used in the computation
                 time-now))))
 
 (defparameter *fps-sample-size* 10)
-(let (last-frame
-      (fps-stack)
-      (frames 0)
-      (cumulative-mean 0))
-  (defun notify-frame ()
-    (when (> (length fps-stack) *fps-sample-size*)
-      (setf (cdr (last fps-stack 2)) nil))
-    (let ((now (now)))
-      (when last-frame
-        (let ((time-delta (- now last-frame)))
-          (unless (zerop time-delta)
-            (push (/ time-delta)
-                  fps-stack)
-            (setf cumulative-mean (/ (+ (last-fps)
-                                        (* frames cumulative-mean))
-                                     (1+ frames)))
-            (incf frames))))
-      (setf last-frame now)))
-  (defun notify-unpause ()
-    (setf last-frame (now)))
-  (defun last-fps ()
-    (first fps-stack))
-  (defun mean-fps ()
-    (when fps-stack
-      (/ (reduce #'+ fps-stack) (length fps-stack))))
-  (defun cumulative-mean-fps ()
-    cumulative-mean)
-  (defun reset-cumulative-mean-fps ()
-    "Restart calculating the cumulative mean relative to the current frame."
-    (setf frames 0)
-    (setf cumulative-mean 0)))
 
-;;;
-;;; Demo class
-;;;
+(defstruct (frame-stats (:conc-name fs-))
+  (last-frame nil)
+  (stack '())
+  (frames 0)
+  (cumulative-mean 0))
+
+(defvar *frame-stats*
+  (make-frame-stats))
+
+(defun notify-frame ()
+  (let ((fs *frame-stats*))
+    (symbol-macrolet ((fps-stack (fs-stack fs))
+                      (last-frame (fs-last-frame fs))
+                      (cumulative-mean (fs-cumulative-mean fs))
+                      (frames (fs-frames fs)))
+      (when (> (length fps-stack) *fps-sample-size*)
+        (setf (cdr (last fps-stack 2)) nil))
+      (let ((now (now)))
+        (when last-frame
+          (let ((time-delta (- now last-frame)))
+            (unless (zerop time-delta)
+              (push (/ time-delta) fps-stack)
+              (setf cumulative-mean (/ (+ (last-fps)
+                                          (* frames cumulative-mean))
+                                       (1+ frames)))
+              (incf frames))))
+        (setf last-frame now)))))
+
+(defun notify-unpause ()
+  (setf (fs-last-frame *frame-stats*) (now)))
+
+(defun last-fps ()
+  (first (fs-stack *frame-stats*)))
+
+(defun mean-fps ()
+  (let ((stack (fs-stack *frame-stats*)))
+    (when stack
+      (/ (reduce #'+ stack) (length stack)))))
+
+(defun cumulative-mean-fps ()
+  (fs-cumulative-mean *frame-stats*))
+
+(defun reset-cumulative-mean-fps ()
+  "Restart calculating the cumulative mean relative to the current frame."
+  (let ((fs *frame-stats*))
+    (setf (fs-frames fs) 0)
+    (setf (fs-cumulative-mean fs) 0)))
+
+;;;; Demo class
+
 (defclass demo ()
   ((name :initarg :name :accessor demo-name)
    (pausedp :initform nil :accessor pausedp)
@@ -92,10 +111,23 @@ Returns both the difference in time and the current-time used in the computation
    (collision-point-size :initarg :collision-point-size :initform 2 :accessor collision-point-size)
    (draw-collision-normal-p :initarg :draw-collision-normal-p :initform nil :accessor draw-collision-normal-p)))
 
-(defgeneric mouse-position (demo)
-  (:method ((demo demo)) (body-position (mouse-body demo))))
-(defgeneric (setf mouse-position) (new-pos demo)
-  (:method (new-pos (demo demo)) (setf (body-position (mouse-body demo)) new-pos)))
+(defgeneric mouse-position (demo))
+
+(defgeneric (setf mouse-position) (new-pos demo))
+
+(defgeneric draw-demo (demo))
+
+(defgeneric update-demo (demo dt))
+
+(defgeneric init-demo (demo))
+
+(defgeneric grabbablep (actor))
+
+(defmethod mouse-position ((demo demo))
+  (body-position (mouse-body demo)))
+
+(defmethod (setf mouse-position) (new-pos (demo demo))
+  (setf (body-position (mouse-body demo)) new-pos))
 
 (defun update-time (demo)
   (with-slots (delta-time last-frame-time) demo
@@ -104,27 +136,30 @@ Returns both the difference in time and the current-time used in the computation
       (setf last-frame-time now
             delta-time new-dt))))
 
-(defgeneric draw-demo (demo)
-  (:method ((demo demo))
-    (with-slots (line-thickness draw-shapes-p draw-bb-p body-point-size collision-point-size draw-force-p draw-velocity-p draw-collision-normal-p)
-        *current-demo*
-      (draw-world (world *current-demo*) :draw-shapes-p draw-shapes-p
-                  :draw-bb-p draw-bb-p :line-thickness line-thickness
-                  :body-point-size body-point-size :collision-point-size collision-point-size
-                  :draw-force draw-force-p :draw-velocity draw-velocity-p
-                  :draw-collision-normal draw-collision-normal-p))))
+(defmethod draw-demo ((demo demo))
+  (with-slots (line-thickness draw-shapes-p draw-bb-p body-point-size
+               collision-point-size draw-force-p draw-velocity-p
+               draw-collision-normal-p)
+      demo
+    (draw-world (world demo)
+                :draw-shapes-p draw-shapes-p
+                :draw-bb-p draw-bb-p :line-thickness line-thickness
+                :body-point-size body-point-size :collision-point-size collision-point-size
+                :draw-force draw-force-p :draw-velocity draw-velocity-p
+                :draw-collision-normal draw-collision-normal-p)))
 
-(defgeneric update-demo (demo dt))
-(defgeneric init-demo (demo))
-(defgeneric grabbablep (actor)
-  (:method (actor) (declare (ignore actor)) t)
-  (:method ((actor (eql :not-grabbable))) nil))
+(defmethod grabbablep ((actor t))
+  t)
+
+(defmethod grabbablep ((actor (eql :not-grabbable)))
+  nil)
 
 (defun toggle-pause (demo)
-  (if (pausedp demo)
-      (progn (setf (pausedp demo) nil)
-             (notify-unpause))
-      (setf (pausedp demo) t)))
+  (cond ((pausedp demo)
+         (setf (pausedp demo) nil)
+         (notify-unpause))
+        (t
+         (setf (pausedp demo) t))))
 
 (defmethod update-demo :around ((demo demo) dt)
   (declare (ignore dt))
@@ -134,14 +169,13 @@ Returns both the difference in time and the current-time used in the computation
 (defmethod update-demo ((demo demo) dt)
   "The default method locks the update loop to 'realtime'. That is, it
 makes sure that the current world is updated by 1 time unit per second."
-  (incf (accumulator demo) (if (> dt *dt-threshold*) *dt-threshold* dt))
+  (incf (accumulator demo) (min dt *dt-threshold*))
   (loop while (>= (accumulator demo) (physics-timestep demo))
-     do (world-step (world demo) (physics-timestep demo))
-       (decf (accumulator demo) (physics-timestep demo))))
+        do (world-step (world demo) (physics-timestep demo))
+           (decf (accumulator demo) (physics-timestep demo))))
 
-;;;
-;;; Drawing the demos
-;;;
+;;;; Drawing the demos
+
 (defclass squirl-window (glut:window)
   ()
   (:default-initargs :width 640 :height 480 :mode '(:double :rgba :multisample)
@@ -153,7 +187,8 @@ makes sure that the current world is updated by 1 time unit per second."
   (glut:bitmap-string glut:+bitmap-helvetica-10+ string))
 
 (defun draw-instructions ()
-  (let ((x -300) (y 220))
+  (let ((x -300)
+        (y 220))
     (draw-string x y (format nil
                              "Controls:~@
                               #\\N chooses the next demo~@
@@ -170,9 +205,13 @@ makes sure that the current world is updated by 1 time unit per second."
                               #\\C toggles collision normals"))))
 
 (defun draw-fps ()
-  (let ((x -300) (y 0))
-    (draw-string x y (format nil "Last FPS: ~7,2f~%Mean FPS: ~7,2f~%Cumulative Mean FPS:~7,2f"
-                             (last-fps) (mean-fps) (cumulative-mean-fps)))))
+  (let ((x -300)
+        (y 0)
+        (string (format nil "Last FPS: ~7,2f~%Mean FPS: ~7,2f~%Cumulative Mean FPS:~7,2f"
+                        (last-fps)
+                        (mean-fps)
+                        (cumulative-mean-fps))))
+    (draw-string x y string)))
 
 (defun draw-pause-state ()
   (when (pausedp *current-demo*)
@@ -192,51 +231,67 @@ makes sure that the current world is updated by 1 time unit per second."
   (draw-instructions)
   (glut:swap-buffers)
   (let ((new-point (vec-lerp (last-mouse-position *current-demo*)
-                             (mouse-position *current-demo*) 1/4)))
-    (setf (mouse-position *current-demo*) new-point
-          (body-velocity (mouse-body *current-demo*)) (vec* (vec- new-point
-                                                                  (last-mouse-position *current-demo*))
-                                                            60d0)
-          (last-mouse-position *current-demo*) new-point)
+                             (mouse-position *current-demo*)
+                             1/4)))
+    (setf (mouse-position *current-demo*) new-point)
+    (setf (body-velocity (mouse-body *current-demo*))
+          (vec* (vec- new-point (last-mouse-position *current-demo*)) 60d0))
+    (setf (last-mouse-position *current-demo*) new-point)
     (update-demo *current-demo* (delta-time *current-demo*))))
 
 (defun demo-title (demo)
   (concatenate 'string "Demo: " (demo-name demo)))
 
-(defun run-demo (demo-class)
+(defun set-current-demo (demo-class)
   (let ((old-demo *current-demo*))
     (reset-cumulative-mean-fps)
     (clear-color-hash)
-    (setf *current-demo* (make-instance demo-class)
-          (world *current-demo*) (init-demo *current-demo*))
+    (setf *current-demo* (make-instance demo-class))
+    (setf (world *current-demo*) (init-demo *current-demo*))
     (when old-demo
-      (setf (mouse-position *current-demo*) (mouse-position old-demo)
-            (last-mouse-position *current-demo*) (last-mouse-position old-demo)))))
+      (setf (mouse-position *current-demo*) (mouse-position old-demo))
+      (setf (last-mouse-position *current-demo*) (last-mouse-position old-demo)))))
 
 (defmethod glut:keyboard ((w squirl-window) key x y)
   (declare (ignore x y))
   (when (upper-case-p key)
     (setf key (char-downcase key)))
   (case key
-    (#\Esc (glut:destroy-current-window))
-    (#\Return (run-demo (class-of *current-demo*)))
-    (#\Space (toggle-pause *current-demo*))
-    (#\n (run-demo (elt *demos*
-                        (mod (1+ (position (class-name (class-of *current-demo*)) *demos*))
-                             (length *demos*)))))
-    (#\p (run-demo (elt *demos*
-                        (mod (1- (position (class-name (class-of *current-demo*)) *demos*))
-                             (length *demos*)))))
-    (#\a (toggle-anti-aliasing))
-    (#\] (incf (body-point-size *current-demo*)))
-    (#\[ (unless (<= (body-point-size *current-demo*) 0)
-           (decf (body-point-size *current-demo*))))
-    (#\} (incf (collision-point-size *current-demo*)))
-    (#\{ (unless (<= (collision-point-size *current-demo*) 0)
-           (decf (collision-point-size *current-demo*))))
-    (#\v (setf (draw-velocity-p *current-demo*) (not (draw-velocity-p *current-demo*))))
-    (#\f (setf (draw-force-p *current-demo*) (not (draw-force-p *current-demo*))))
-    (#\c (setf (draw-collision-normal-p *current-demo*) (not (draw-collision-normal-p *current-demo*))))))
+    ((#\Esc #\q)
+     (glut:destroy-current-window))
+    (#\Return
+     (set-current-demo (class-of *current-demo*)))
+    (#\Space
+     (toggle-pause *current-demo*))
+    (#\n
+     (set-current-demo (elt *demos*
+                            (mod (1+ (position (class-name (class-of *current-demo*)) *demos*))
+                                 (length *demos*)))))
+    (#\p
+     (set-current-demo (elt *demos*
+                            (mod (1- (position (class-name (class-of *current-demo*)) *demos*))
+                                 (length *demos*)))))
+    (#\a
+     (toggle-anti-aliasing))
+    (#\]
+     (incf (body-point-size *current-demo*)))
+    (#\[
+     (unless (<= (body-point-size *current-demo*) 0)
+       (decf (body-point-size *current-demo*))))
+    (#\}
+     (incf (collision-point-size *current-demo*)))
+    (#\{
+     (unless (<= (collision-point-size *current-demo*) 0)
+       (decf (collision-point-size *current-demo*))))
+    (#\v
+     (setf (draw-velocity-p *current-demo*)
+           (not (draw-velocity-p *current-demo*))))
+    (#\f
+     (setf (draw-force-p *current-demo*)
+           (not (draw-force-p *current-demo*))))
+    (#\c
+     (setf (draw-collision-normal-p *current-demo*)
+           (not (draw-collision-normal-p *current-demo*))))))
 
 (defun toggle-anti-aliasing ()
   (if *aa-enabled-p*
@@ -244,15 +299,14 @@ makes sure that the current world is updated by 1 time unit per second."
       (enable-anti-aliasing)))
 
 (defun disable-anti-aliasing ()
-  (gl:disable #+nil :polygon-smooth :line-smooth :point-smooth :blend :multisample)
+  (gl:disable :line-smooth :point-smooth :blend :multisample)
   (setf *aa-enabled-p* nil))
 
 (defun enable-anti-aliasing ()
-  (gl:enable #+nil :polygon-smooth :line-smooth :point-smooth :blend :multisample)
+  (gl:enable :line-smooth :point-smooth :blend :multisample)
   (gl:blend-func :src-alpha :one-minus-src-alpha)
   (gl:hint :polygon-smooth-hint :nicest)
   (gl:hint :line-smooth-hint :nicest)
-  #+nil (gl:hint :point-smooth-hint :nicest)
   (setf *aa-enabled-p* t))
 
 (defun mouse-to-space (x y)
@@ -260,30 +314,40 @@ makes sure that the current world is updated by 1 time unit per second."
         (proj (gl:get-double :projection-matrix))
         (view (gl:get-double :viewport)))
     (multiple-value-bind (mx my)
-        (glu:un-project x (- (glut:get :window-height) y) 0
-                        :modelview model :projection proj :viewport view)
+        (glu:un-project x
+                        (- (glut:get :window-height) y)
+                        0
+                        :modelview model
+                        :projection proj
+                        :viewport view)
       (vec mx my))))
 
 (defmethod glut:motion ((w squirl-window) x y)
   (setf (mouse-position *current-demo*) (mouse-to-space x y)))
+
 (defmethod glut:passive-motion ((w squirl-window) x y)
   (setf (mouse-position *current-demo*) (mouse-to-space x y)))
 
 (defmethod glut:mouse ((w squirl-window) button state x y)
-  (if (eq button :left-button)
-      (if (eq state :down)
-          (let* ((point (mouse-to-space x y))
-                 (shape (world-point-query-first (world *current-demo*) point)))
-            (when (and shape (grabbablep (body-actor (shape-body shape))))
-              (let ((body (shape-body shape)))
-                (setf (mouse-joint *current-demo*) (make-pivot-joint (mouse-body *current-demo*) body
-                                                                     +zero-vector+
-                                                                     (world->body-local body point))
-                      (squirl::constraint-max-force (mouse-joint *current-demo*)) 50000
-                      (squirl::constraint-bias-coefficient (mouse-joint *current-demo*)) 0.15)
-                (world-add-constraint (world *current-demo*) (mouse-joint *current-demo*)))))
-          (progn (world-remove-constraint (world *current-demo*) (mouse-joint *current-demo*))
-                 (setf (mouse-joint *current-demo*) nil)))))
+  (case button
+    (:left-button
+     (case state
+       (:down
+        (let* ((point (mouse-to-space x y))
+               (shape (world-point-query-first (world *current-demo*) point)))
+          (when (and shape (grabbablep (body-actor (shape-body shape))))
+            (let ((body (shape-body shape)))
+              (setf (mouse-joint *current-demo*)
+                    (make-pivot-joint (mouse-body *current-demo*)
+                                      body
+                                      +zero-vector+
+                                      (world->body-local body point)))
+              (setf (squirl::constraint-max-force (mouse-joint *current-demo*)) 50000)
+              (setf (squirl::constraint-bias-coefficient (mouse-joint *current-demo*)) 0.15)
+              (world-add-constraint (world *current-demo*) (mouse-joint *current-demo*))))))
+       (t
+        (world-remove-constraint (world *current-demo*) (mouse-joint *current-demo*))
+        (setf (mouse-joint *current-demo*) nil))))))
 
 (cffi:defcallback timercall :void ((value :int))
   (declare (ignore value))
@@ -291,7 +355,8 @@ makes sure that the current world is updated by 1 time unit per second."
   (glut:post-redisplay))
 
 (defun set-arrow-direction ()
-  (let ((x 0) (y 0))
+  (let ((x 0)
+        (y 0))
     (when *key-up* (incf y))
     (when *key-down* (decf y))
     (when *key-right* (incf x))
@@ -323,12 +388,18 @@ makes sure that the current world is updated by 1 time unit per second."
   (gl:ortho -320 320 -240 240 -1 1)
   (gl:translate 1/2 1/2 0)
   (gl:enable-client-state :vertex-array)
-  (enable-anti-aliasing)
-  #+nil(glut:timer-func 16 (cffi:callback timercall) 0))
+  (enable-anti-aliasing))
+
+(defun run-demo (demo-class)
+  (set-current-demo demo-class)
+  (glut:display-window (make-instance 'squirl-window)))
 
 (defun run-all-demos ()
   (when *demos*
-    (run-demo (nth (random (length *demos*)) *demos*))
+    (set-current-demo (nth (random (length *demos*)) *demos*))
     (glut:display-window (make-instance 'squirl-window))
     ;; this is a kludge around an apparent cl-glut bug.
     (setf glut::*glut-initialized-p* nil)))
+
+(defun provide-demo (demo-class)
+  (pushnew demo-class *demos*))

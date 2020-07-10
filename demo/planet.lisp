@@ -52,4 +52,4 @@
     (world-add-body (world demo) (planet demo))
     (world demo))
 
-(pushnew 'planet-demo *demos*)
+(provide-demo 'planet-demo)

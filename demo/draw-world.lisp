@@ -1,8 +1,7 @@
 (in-package :squirl-demo)
 
-;;;
-;;; Configuration
-;;;
+;;;; Configuration
+
 (defparameter *line-color* '(0 0 0 1))
 (defparameter *collision-color* '(1 0 0 1))
 (defparameter *body-color* '(0 0 1 1))
@@ -10,9 +9,8 @@
 (defparameter *bb-color* '(1 0 0 1))
 (defparameter *bb-line-width* 2)
 
-;;;
-;;; Primitives
-;;;
+;;;; Primitives
+
 (defun draw-circle (x y radius &key (resolution 10) (filled t))
   (let* ((theta (* 2 (/ pi resolution)))
          (tangential-factor (tan theta))
@@ -44,10 +42,11 @@
        do (gl:vertex (vec-x a) (vec-y a))
        (gl:vertex (vec-x b) (vec-y b)))))
 
-;;;
-;;; Bodies and shapes
-;;;
-(defparameter *color-hash* (make-hash-table :test 'eq))
+;;;; Bodies and shapes
+
+(defparameter *color-hash*
+  (make-hash-table :test 'eq))
+
 (defun clear-color-hash ()
   (clrhash *color-hash*))
 
@@ -73,6 +72,7 @@
       (gl:vertex (squirl::bbox-right bbox) (squirl::bbox-bottom bbox)))))
 
 (defgeneric draw-shape (shape))
+
 (defmethod draw-shape :before (shape)
   (apply #'gl:color (ensure-color shape)))
 
@@ -90,34 +90,33 @@
     (draw-circle x y (round radius) :resolution 30 :filled nil)
     (draw-line (vec-x edge-t) (vec-y edge-t) (vec-x center) (vec-y center))))
 
-
-
-(defparameter *pill-var* '((0.0000 . 1.0000)
-                           (0.2588 . 0.9659)
-                           (0.5000 . 0.8660)
-                           (0.7071 . 0.7071)
-                           (0.8660 . 0.5000)
-                           (0.9659 . 0.2588)
-                           (1.0000 . 0.0000)
-                           (0.9659 . -0.2588)
-                           (0.8660 . -0.5000)
-                           (0.7071 . -0.7071)
-                           (0.5000 . -0.8660)
-                           (0.2588 . -0.9659)
-                           (0.0000 . -1.0000)
-                           (0.0000 . -1.0000)
-                           (-0.2588 . -0.9659)
-                           (-0.5000 . -0.8660)
-                           (-0.7071 . -0.7071)
-                           (-0.8660 . -0.5000)
-                           (-0.9659 . -0.2588)
-                           (-1.0000 . -0.0000)
-                           (-0.9659 . 0.2588)
-                           (-0.8660 . 0.5000)
-                           (-0.7071 . 0.7071)
-                           (-0.5000 . 0.8660)
-                           (-0.2588 . 0.9659)
-                           (0.0000 . 1.0000)))
+(defparameter *pill-var*
+  '((0.0000 . 1.0000)
+    (0.2588 . 0.9659)
+    (0.5000 . 0.8660)
+    (0.7071 . 0.7071)
+    (0.8660 . 0.5000)
+    (0.9659 . 0.2588)
+    (1.0000 . 0.0000)
+    (0.9659 . -0.2588)
+    (0.8660 . -0.5000)
+    (0.7071 . -0.7071)
+    (0.5000 . -0.8660)
+    (0.2588 . -0.9659)
+    (0.0000 . -1.0000)
+    (0.0000 . -1.0000)
+    (-0.2588 . -0.9659)
+    (-0.5000 . -0.8660)
+    (-0.7071 . -0.7071)
+    (-0.8660 . -0.5000)
+    (-0.9659 . -0.2588)
+    (-1.0000 . -0.0000)
+    (-0.9659 . 0.2588)
+    (-0.8660 . 0.5000)
+    (-0.7071 . 0.7071)
+    (-0.5000 . 0.8660)
+    (-0.2588 . 0.9659)
+    (0.0000 . 1.0000)))
 
 (defmethod draw-shape ((seg segment))
   (let ((a (vec+ (body-position (shape-body seg))
@@ -126,33 +125,34 @@
         (b (vec+ (body-position (shape-body seg))
                  (vec-rotate (squirl::segment-b seg)
                              (body-rotation (shape-body seg))))))
-    (if (< 0 (squirl::segment-radius seg))
-        (let* ((delta (vec- b a))
-               (length (/ (vec-length delta) (squirl::segment-radius seg)))
-               (verts (loop with verts = (copy-tree *pill-var*)
-                         for i below (/ (length *pill-var*) 2)
-                         do (incf (car (elt verts i)) length)
-                         finally (return verts))))
-          (gl:with-pushed-matrix
-            (let ((x (vec-x a))
-                  (y (vec-y a))
-                  (cos (/ (vec-x delta) length))
-                  (sin (/ (vec-y delta) length)))
-              (gl:mult-matrix (make-array '(4 4)
-                                          :initial-contents
-                                          (list (list cos sin 0 0)
-                                                (list (- sin) cos 0 0)
-                                                (list 0 0 1 1)
-                                                (list x y 0 1))))
-              (gl:with-primitives :triangle-fan
-                (loop for (x . y) in verts
-                   do (gl:vertex x y)))
-              (apply #'gl:color *line-color*)
-              (gl:with-primitives :line-loop
-                (loop for (x . y) in verts
-                   do (gl:vertex x y))))))
-        (progn (gl:line-width (squirl::segment-radius seg))
-               (draw-line (vec-x a) (vec-y a) (vec-x b) (vec-y b))))))
+    (cond ((plusp (squirl::segment-radius seg))
+           (let* ((delta (vec- b a))
+                  (length (/ (vec-length delta) (squirl::segment-radius seg)))
+                  (verts (loop with verts = (copy-tree *pill-var*)
+                               for i below (/ (length *pill-var*) 2)
+                               do (incf (car (elt verts i)) length)
+                               finally (return verts))))
+             (gl:with-pushed-matrix
+               (let ((x (vec-x a))
+                     (y (vec-y a))
+                     (cos (/ (vec-x delta) length))
+                     (sin (/ (vec-y delta) length)))
+                 (gl:mult-matrix (make-array '(4 4)
+                                             :initial-contents
+                                             (list (list cos sin 0 0)
+                                                   (list (- sin) cos 0 0)
+                                                   (list 0 0 1 1)
+                                                   (list x y 0 1))))
+                 (gl:with-primitives :triangle-fan
+                   (loop for (x . y) in verts
+                         do (gl:vertex x y)))
+                 (apply #'gl:color *line-color*)
+                 (gl:with-primitives :line-loop
+                   (loop for (x . y) in verts
+                         do (gl:vertex x y)))))))
+          (t
+           (gl:line-width (squirl::segment-radius seg))
+           (draw-line (vec-x a) (vec-y a) (vec-x b) (vec-y b))))))
 
 (defmethod draw-shape ((poly poly))
   (let ((vertices (poly-transformed-vertices poly)))
@@ -161,9 +161,8 @@
     (gl:line-width *line-width*)
     (draw-poly vertices :filled nil)))
 
-;;;
-;;; Constraints
-;;;
+;;;; Constraints
+
 (defgeneric draw-constraint (constraint))
 
 (defmethod draw-constraint ((constraint squirl::constraint))
@@ -261,7 +260,7 @@
      (gl:with-primitive :lines
        (gl:vertex 0 0)
        (gl:vertex 0 1)
-       
+
        (gl:vertex 0 1)
        (gl:vertex 0.25 0.75)
 
@@ -286,21 +285,25 @@
      for position = (squirl::contact-point contact)
      do (draw-vector position (vec* normal 10d0))))
 
-;;;
-;;; Drawing the world.
-;;;
+;;;; Drawing the world.
+
 (defun set-body-point (body)
   (gl:vertex (vec-x (body-position body))
              (vec-y (body-position body))))
 
 (defun set-collision-points (arbiter)
   (loop for contact in (squirl::arbiter-contacts arbiter)
-     for contact-position = (squirl::contact-point contact)
-     do (gl:vertex (vec-x contact-position) (vec-y contact-position))))
+        for contact-position = (squirl::contact-point contact)
+        do (gl:vertex (vec-x contact-position) (vec-y contact-position))))
 
 (defun draw-world (world &key (line-thickness 1)
-                   draw-bb-p (draw-shapes-p t) (body-point-size 2) (collision-point-size 2)
-                   draw-force draw-velocity draw-collision-normal)
+                              (draw-bb-p nil)
+                              (draw-shapes-p t)
+                              (body-point-size 2)
+                              (collision-point-size 2)
+                              (draw-force nil)
+                              (draw-velocity nil)
+                              (draw-collision-normal nil))
   (gl:line-width line-thickness)
   (when draw-shapes-p
     (map-world #'draw-body world))

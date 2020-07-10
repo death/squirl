@@ -49,4 +49,4 @@
   (create-polygons demo)
   (world demo))
 
-(pushnew 'plink-demo *demos*)
+(provide-demo 'plink-demo)
