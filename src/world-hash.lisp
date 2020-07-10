@@ -56,7 +56,7 @@ list structure into the `world-hash-junk'."
 
 (defun clear-world-hash (hash)
   "Clear all cells in the `world-hash' HASH"
-  (declare (optimize speed (safety 0)))
+  (declare (optimize speed))
   (let ((table (world-hash-table hash)))
     (declare (simple-vector table))
     (dotimes (index (the fixnum (length table)))
