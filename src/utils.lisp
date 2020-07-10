@@ -62,22 +62,25 @@ the result of calling DELETE with PREDICATE, place, and the REMOVE-KEYWORDS.")
   #+clisp `(ext:without-floating-point-underflow ,form)
   form)
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defun symbolicate (&rest things)
-    "Concatenate together the names of some strings and symbols,
+(defun symbolicate (&rest things)
+  "Concatenate together the names of some strings and symbols,
 producing a symbol in the current package."
-    (let ((name (make-string (reduce #'+ things :key (lambda (thing) (length (string thing)))))))
-      (let ((index 0))
-        (dolist (thing things (values (intern name)))
-          (let ((x (string thing)))
-            (replace name x :start1 index)
-            (incf index (length x))))))))
+  (let ((name (make-string (reduce #'+ things :key (lambda (thing) (length (string thing)))))))
+    (let ((index 0))
+      (dolist (thing things (values (intern name)))
+        (let ((x (string thing)))
+          (replace name x :start1 index)
+          (incf index (length x)))))))
 
-(macrolet ((define-ensure-foo (place) ; Lisp macros are nice
-             `(defun ,(symbolicate "ENSURE-" place) (place &optional (default place))
-                (if (atom place) default (,place place)))))
-  (define-ensure-foo car)
-  (define-ensure-foo cadr))
+(defun ensure-car (object &optional (default object))
+  (if (atom object)
+      default
+      (car object)))
+
+(defun ensure-cadr (object &optional (default object))
+  (if (atom object)
+      default
+      (cadr object)))
 
 (defmacro push-cons (cons place)
   "Like `cl:push', but reuses CONS"
