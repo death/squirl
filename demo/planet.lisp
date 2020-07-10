@@ -27,29 +27,30 @@
      when (< 88 (vec-length vec) 200)
      return vec))
 
-(let ((size 10) (mass 1))
-  (defun add-box ()
-    (let* ((verts (list (vec (- size) (- size))
-                        (vec (- size) size)
-                        (vec size size)
-                        (vec size (- size)))))
+(defun add-box (world)
+  (let* ((size 10)
+         (mass 1)
+         (verts (list (vec (- size) (- size))
+                      (vec (- size) size)
+                      (vec size size)
+                      (vec size (- size)))))
       (world-add-body
-       (world *current-demo*)
+       world
        (make-planetary-body :mass mass
                             :position (random-position (vec-length (vec size size)))
                             :velocity (vec* (angle->vec (* pi (random 2d0)))
                                             (random 200d0))
                             :shapes (list
-                                     (make-poly verts :friction 0.7 :restitution 1)))))))
+                                     (make-poly verts :friction 0.7 :restitution 1))))))
 
 (defmethod init-demo ((demo planet-demo))
-  (setf (planet demo)
+  (let ((world (make-world :iterations 20)))
+    (setf (planet demo)
           (make-body :angular-velocity 0.3 :actor :not-grabbable
                      :shapes (list (make-circle 70 :restitution 1 :friction 0.8))))
     (reset-shape-id-counter)
-    (setf (world demo) (make-world :iterations 20))
-    (loop repeat 22 do (add-box))
-    (world-add-body (world demo) (planet demo))
-    (world demo))
+    (loop repeat 22 do (add-box world))
+    (world-add-body world (planet demo))
+    world))
 
 (provide-demo 'planet-demo)
