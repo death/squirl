@@ -36,7 +36,7 @@
          (lower-leg (world-add-body
                      world
                      (make-body :mass leg-mass
-                                :position (vec offset 0)
+                                :position (vec offset (- side))
                                 :actor walker
                                 :shapes (list (make-segment +zero-vector+
                                                             (vec 0 (- side))
@@ -108,10 +108,10 @@
       ;; add the legs...
       (loop for i below num-legs
             do (make-leg world side offset walker
-                         (vec* (angle->vec (/ (* 2 i) (* num-legs pi)))
+                         (vec* (angle->vec (* (/ (* 2 i) num-legs) pi))
                                crank-radius))
                (make-leg world side (- offset) walker
-                         (vec* (angle->vec (/ (* 2 (1+ i)) (* num-legs pi)))
+                         (vec* (angle->vec (* (/ (* 2 (1+ i)) num-legs) pi))
                                crank-radius)))
       (setf (demo-motor demo)
             (world-add-constraint world
